@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	pre_debootstrap
+# called by:	uic_create
+#
+# This hook will be called by uic_create before performing
+# a debootstrap of a base system in $TARGET

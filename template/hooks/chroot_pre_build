@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	chroot_pre_build
+# called by:	uic_build
+#
+# This hook will be called by uic_build in the chrooted installation
+# environment in $TARGET before performing the first build step of the
+# build procedure.

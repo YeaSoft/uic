@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_debootstrap
+# called by:	uic_create
+#
+# This hook will be called by uic_create after performing
+# a debootstrap of a base system in $TARGET

@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_installation
+# called by:	uic_create, uic_upgrade
+#
+# This hook will be called by uic_create after making all software
+# installation and configuration steps in the installation environment
+# in $TARGET
+
+# restore the original resolv.conf
+cp -a "$TARGET/files/etc/resolv.conf" "$TARGET/chroot/etc/resolv.conf"

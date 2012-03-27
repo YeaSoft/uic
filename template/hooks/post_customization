@@ -1,0 +1,9 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# uic hook:	post_customization
+# called by:	uic_create, uic_build
+#
+# This hook will be called by several commands after making any customizations
+# (file copies and deletions) to the installation environment in $TARGET
