@@ -149,7 +149,7 @@ case "${UIC_ROOTPASSWORD}" in
 	done
 	;;
 *)	show_verbose 1 "Setting root password..."
-	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "$TARGET/chroot" passwd root
+	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "$TARGET/chroot" passwd root  2> /dev/null
 	;;
 esac
 
