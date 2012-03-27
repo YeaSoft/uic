@@ -5,32 +5,25 @@
 # Version 20120326
 # This script creates an Ubuntu installation environment
 
-VERSION=0.1
-SCRIPTNAME=$(basename $0)
-SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
-
 #####################################
 # variables section
-
 
 # initialize configuration variables by
 # loading default configuration data
 source uic.conf
 
+# load user customized configuration data
+[ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
 # initialize runtime variables
 FORCE=0
 
-# load user customized configuration data
-if [ -e /etc/uic.conf ]; then
-	source /etc/uic.conf
-fi
-
 #####################################
-# basic script functions
+# function section
 
 # load function library
-. yea_utils
-. uic_utils
+source yea_utils
+source uic_utils
 
 function usage {
 	cat <<EOF

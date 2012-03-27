@@ -5,10 +5,6 @@
 # Version 20120326
 # This script packages an installation environment for distribution
 
-VERSION=0.1
-SCRIPTNAME=$(basename $0)
-SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
-
 #####################################
 # variables section
 
@@ -17,20 +13,18 @@ SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
 source uic.conf
 
 # load user customized configuration data
-if [ -e /etc/uic.conf ]; then
-	source /etc/uic.conf
-fi
+[ -f /etc/uic.conf ] &&	source /etc/uic.conf
 
 # initialize runtime variables
 OUTPUTPATH="${UIC_WORKDIR}"
 ONLYUPDATE=0
 
 #####################################
-# basic script functions
+# function section
 
 # load function library
-. yea_utils
-. uic_utils
+source yea_utils
+source uic_utils
 
 function usage {
 	cat <<EOF

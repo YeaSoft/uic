@@ -5,11 +5,17 @@
 # VERSION 20120326
 # function collection for the netpoldo development system
 
+#####################
+# Internal Variables
+VERSION=0.3
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
 OLDHOSTNAME=$(hostname)
 TARGET=
+
+#####################
+# Functions
 
 function init_script() {
 	trap cleanup_script INT QUIT TERM EXIT

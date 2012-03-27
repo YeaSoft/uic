@@ -2,44 +2,53 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120319
+# Version 20120327
 # This script is the dispatcher of the Ubuntu Installation Creator
 
-VERSION=0.1
-SCRIPTNAME=$(basename $0)
-SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+#####################################
+# variables section
 
-# load configuration data
-if [ -e /etc/uic.conf ]; then
-        source /etc/uic.conf
-elif [ -e $SCRIPTPATH/uic.conf ]; then
-	source $SCRIPTPATH/uic.conf
-fi
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# load user customized configuration data
+[ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
+#####################################
+# function section
+
+# load function library
+source yea_utils
+source uic_utils
 
 function usage {
 	cat <<EOF
 usage: $SCRIPTNAME <command> [...]
 
 Commands:
-	prepare           prepares an installation environment
-	update            updates the installation environment
-	create            creates the installation
-	upgrade           upgrade an installation
-	enter             chroot's into an installation
-	clean             cleans up an installation
-	build             produces the deliverables of an installation
+        prepare           prepares an installation environment
+        update            updates the installation environment
+        create            creates the installation
+        upgrade           upgrades the installation
+        enter             chroots into the installation
+        clean             cleans up the installation
+        build             produces the deliverables of the installation
+
+        pack              packages an installation environment for
+                          distribution
 
 This is the main dispatch of the Ubuntu Installation Creator (UIC)
 
 EOF
 }
 
-if [ $# -lt 1 ]; then
+if [ $# -lt 1 -o "${1:0:1}" = "-" ]; then
 	usage
 	exit 1
 fi
 
-if [ ! -x uic_$1 -a ! -x $(which uic_$1) ]; then
+if [ ! -x "uic_$1" -a ! -x "$(which uic_$1)" ]; then
 	usage
 	exit 1
 fi
