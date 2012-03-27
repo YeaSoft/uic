@@ -130,11 +130,7 @@ if [ -z "${ENVNAME}" ]; then
 	ENVNAME="${UICPATH}"
 fi
 
-/bin/bash
-
 verify_environment "${TMPDESTINATION}/${UICPATH}"
-
-/bin/bash
 
 if [ -d "${DESTPATH}/${ENVNAME}" ]; then
 	if [ ${FORCE} -gt 0 ]; then
