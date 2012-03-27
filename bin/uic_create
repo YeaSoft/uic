@@ -1,0 +1,167 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script creates an Ubuntu installation environment
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# initialize runtime variables
+FORCE=0
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+#####################################
+# basic script functions
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvF] [<environment name>]
+
+Options:
+ -F, --force                  force deletion of existing installation
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script creates an Ubuntu installation environment
+
+<environment name> can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F --longoptions help,verbose,force -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-F|--force)                     FORCE=1; shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+verify_environment $1
+
+if [ -d "$TARGET/chroot" ]; then
+	# test if there is already a populated installation
+	if [ $(find "$TARGET/chroot" | wc -l) -gt 1 -a $FORCE -lt 1 ]; then
+		show_error "Target installation environment ${TARGETNAME} is already existing. Use -F to force cleanup."
+		exit 1
+	fi
+
+	# check if some of the special file system mounts are still existing
+	test_mountinuse
+
+	# clean up installation area if needed
+	if [ $(find "$TARGET/chroot" | wc -l) -gt 1 -a $FORCE -gt 0 ]; then
+		show_verbose 1 "Cleaning up target installation environment ${TARGETNAME}..."
+		rm -rf "$TARGET/chroot"
+		mkdir -p "$TARGET/chroot"
+	fi
+else
+	mkdir -p "$TARGET/chroot"
+fi
+
+show_verbose 2 "Loading environment configuration..."
+source "$TARGET/uic.conf"
+
+show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
+call_hook pre_debootstrap
+debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" ${UIC_REPOSITORY}
+test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" ${UIC_REPOSITORY}
+call_hook post_debootstrap
+
+show_verbose 2 "Preparing chroot special filesystems..."
+init_script
+chroot_init
+
+apply_customizations
+
+call_hook pre_installation
+call_chroot_hook chroot_pre_installation
+
+show_verbose 1 "Updating package sources..."
+chroot "$TARGET/chroot" apt-get update
+test_exec chroot chroot apt-get update
+show_verbose 1 "Creating locales..."
+chroot "$TARGET/chroot" dpkg-reconfigure locales
+test_exec chroot chroot $TARGET/chroot dpkg-reconfigure locales
+if [ -n "$UIC_RECONFIGURE" ]; then
+	show_verbose 1 "Configuring packages..."
+	chroot "$TARGET/chroot" dpkg-reconfigure $UIC_RECONFIGURE
+	test_exec chroot chroot $TARGET/chroot dpkg-reconfigure $UIC_RECONFIGURE
+fi
+show_verbose 1 "Updating system..."
+chroot $TARGET/chroot apt-get -y upgrade
+test_exec chroot chroot "$TARGET/chroot" apt-get -y upgrade
+if [ -n "$UIC_SOFTWARE" ]; then
+	show_verbose 1 "Installing software..."
+	chroot "$TARGET/chroot" apt-get -y install $UIC_SOFTWARE
+	test_exec chroot chroot $TARGET/chroot apt-get -y install $UIC_SOFTWARE
+fi
+if [ -n "$UIC_KERNEL" ]; then
+	show_verbose 1 "Installing kernel..."
+	chroot "$TARGET/chroot" apt-get -y install $UIC_KERNEL
+	test_exec chroot chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
+fi
+
+case "${UIC_ROOTPASSWORD}" in
+"")	show_warning "Password will not be initialized"
+	;;
+"ask")	show_verbose 1 "Asking for root password..."
+	until chroot "$TARGET/chroot" passwd root; do
+		show_warning "You have to specify a valid password for root"
+	done
+	;;
+*)	show_verbose 1 "Setting root password..."
+	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "$TARGET/chroot" passwd root
+	;;
+esac
+
+call_chroot_hook chroot_post_installation
+call_hook post_installation
+
+show_verbose 2 "Cleaning up chroot special filesystems..."
+chroot_exit

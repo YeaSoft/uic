@@ -1,0 +1,376 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script produces the deliverables of an Ubuntu installation environment
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# initialize runtime variables
+SKIP_CUSTOMIZATION=0
+LIST_TARGETS=0
+BUILD_TARGET=
+VBPARAM=""
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+#####################################
+# function section
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvlC] [-b <number>] [<environment name>]
+
+Options:
+ -b, --build-target <number>  builds only the build target with index number <number>
+ -C, --skip-customization     skips the target customization
+ -l, --list                   show the list of defined build targets
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script produces the deliverables of an Ubuntu installation environment
+
+<environment name> can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+function list_targets {
+	if [ ${#UIC_TARGET[@]} -eq 0 ]; then
+		echo "There are no build targets defined for $TARGETNAME"
+		return 0
+	fi
+
+	echo "The following build targets are defined for $TARGETNAME:"
+	echo
+	echo "Index    Build Target"
+	echo "-------------------------------------------------------"
+	for target_index in $(seq 0 $((${#UIC_TARGET[@]} - 1))); do
+		printf "%-5i    %s\n" $target_index "${UIC_TARGET[$target_index]}"
+	done
+	return 0
+}
+
+function build_target {
+	UIC_BUILDTYPE=$(expr match "$1" '\([^:]*\)')
+	UIC_BUILDNAME=${1#${UIC_BUILDTYPE}:}
+	shift
+	[ -d "${TARGET}/output" ] || mkdir -p "${TARGET}/output"
+	case "$UIC_BUILDTYPE" in
+	"none")		;;
+	"kernel")	build_target_kernel $@;;
+	"initrd")	build_target_initrd $@;;
+	"squashfs")	build_target_squashfs $@;;
+	"install")	build_target_install $@;;
+	*)		if [ -x "$TARGET/build/build_target_$UIC_BUILDTYPE" ]; then
+				show_verbose 2 "Calling custom buildscript build_target_$UIC_BUILDTYPE..."
+				source "$TARGET/build/build_target_$UIC_BUILDTYPE"
+			else
+				show_error "Build type $UIC_BUILDTYPE unknown"
+				exit 2
+			fi
+			;;
+	esac
+	return 0
+}
+
+
+function build_target_TEMPLATE {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}."
+	# parse parameters
+	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# perform the build step
+	call_hook pre_build_TEMPLATE
+	call_chroot_hook chroot_pre_build_TEMPLATE
+
+	cleanup_environment
+
+	call_chroot_hook chroot_post_build_TEMPLATE
+	call_hook post_build_TEMPLATE
+}
+
+function build_target_install {
+	# initialize variables
+	UIC_OUTPUTPATH=
+	# parse parameters
+	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTPATH="${2}"
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# check the configuration
+	if [ -z "${UIC_OUTPUTPATH}" ]; then
+		show_error "An existing output path must be specified"
+		exit 3
+	fi
+	if [ ! -d "${UIC_OUTPUTPATH}" ]; then
+		show_error "Output path ${UIC_OUTPUTPATH} is not existing"
+		exit 2
+	fi
+
+	# perform the build step
+	call_hook pre_build_install
+	call_chroot_hook chroot_pre_build_install
+
+	show_verbose 1 "Installing ${TARGETNAME} to ${UIC_OUTPUTPATH}..."
+	cp -a $VBPARAM "${TARGET}/output/." "${UIC_OUTPUTPATH}/"
+
+	call_chroot_hook chroot_post_build_install
+	call_hook post_build_install
+}
+
+function build_target_kernel {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}.vmlinuz"
+	# parse parameters
+	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# perform the build step
+	call_hook pre_build_kernel
+	call_chroot_hook chroot_pre_build_kernel
+
+	cleanup_environment
+
+	if [ ! -f "${TARGET}/chroot/vmlinuz" ]; then
+		show_error "No valid kernel found in the installation environment."
+		exit 2
+	fi
+	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
+	cp $VBPARAM "${TARGET}/chroot/vmlinuz" "${TARGET}/output/${UIC_OUTPUTFILE}"
+
+	call_chroot_hook chroot_post_build_kernel
+	call_hook post_build_kernel
+}
+
+function build_target_initrd {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}.initrd"
+	UIC_CONFIGFILE="${TARGET}/build/${UIC_BUILDNAME}.initramfs.conf"
+	# parse parameters
+	PARSER=$(getopt --name build_target_squashfs --options o:,c: --longoptions output:,config: -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		-c|--config)	UIC_CONFIGFILE="${TARGET}/build/${2}"
+				if [ ! -f "${UIC_CONFIGFILE}" ]; then
+					show_error "Configuration file $2 does not exist"
+					exit 2
+				fi
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# perform the build step
+	call_hook pre_build_initrd
+	call_chroot_hook chroot_pre_build_initrd
+
+	cleanup_environment
+
+	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
+	[ -f "${UIC_CONFIGFILE}" ] && cp "${UIC_CONFIGFILE}" "${TARGET}/chroot/etc/initramfs-tools/initramfs.conf"
+	chroot "${TARGET}/chroot" /usr/sbin/update-initramfs -c -k all
+	cp  "${TARGET}/chroot/initrd.img" "${TARGET}/output/${UIC_OUTPUTFILE}"
+
+	call_chroot_hook chroot_post_build_initrd
+	call_hook post_build_initrd
+}
+
+function build_target_squashfs {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}.squashfs"
+	UIC_EXCLUDEFILE="${TARGET}/build/${UIC_BUILDNAME}.squash.exclude"
+	# parse parameters
+	PARSER=$(getopt --name build_target_squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		-e|--exclude)	UIC_EXCLUDEFILE="${TARGET}/build/${2}"
+				if [ ! -f "${UIC_EXCLUDEFILE}" ]; then
+					show_error "Exclude file $2 does not exist"
+					exit 2
+				fi
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	show_verbose 1 "Testing Prerequisites..."
+	if [ -z $(chroot "${TARGET}/chroot" which mksquashfs) ]; then
+		show_error "Package squashfs-tools not installed in the installation environment."
+		exit 1
+	fi
+
+	call_hook pre_build_squashfs
+	call_chroot_hook chroot_pre_build_squashfs
+
+	cleanup_environment
+
+	show_verbose 1 "Preparing root filesystem..."
+	mkdir -p "${TARGET}/chroot/root/squash/fs"
+	mkdir -p "${TARGET}/chroot/root/squash/out"
+	[ -f ${UIC_EXCLUDEFILE} ] && cp ${UIC_EXCLUDEFILE} "${TARGET}/chroot/root/squash/exclude"
+	[ -f ${UIC_EXCLUDEFILE} ] || touch "${TARGET}/chroot/root/squash/exclude"
+	echo "root/squash" >> "${TARGET}/chroot/root/squash/exclude"
+	mount -o bind "${TARGET}/chroot" "${TARGET}/chroot/root/squash/fs"
+	mount -o bind "${TARGET}/output" "${TARGET}/chroot/root/squash/out"
+
+	show_verbose 1 "Create compressed squash filesystem..."
+	chroot  "${TARGET}/chroot" mksquashfs /root/squash/fs "/root/squash/out/${UIC_OUTPUTFILE}" -noappend -wildcards -ef /root/squash/exclude
+
+	show_verbose 1 "Cleaning up root filesystem..."
+	umount "${TARGET}/chroot/root/squash/fs"
+	umount "${TARGET}/chroot/root/squash/out"
+	rm -rf "${TARGET}/chroot/root/squash"
+
+	call_chroot_hook chroot_post_build_squashfs
+	call_hook post_build_squashfs
+}
+
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,l,C,b: --longoptions help,verbose,list,skip-customization,build-target: -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-l|--list)			LIST_TARGETS=1; shift;;
+	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
+	-b|--build-target)		BUILD_TARGET=$2; shift 2;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	VBPARAM="-v"; show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+verify_environment $1
+
+# checks if the installation environment has been populated
+test_environment_empty
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+show_verbose 2 "Loading environment configuration..."
+source "$TARGET/uic.conf"
+
+if [ $LIST_TARGETS -gt 0 ]; then
+	list_targets
+	exit $?
+fi
+
+
+show_verbose 2 "Preparing chroot special filesystems..."
+init_script
+chroot_init
+
+if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+	apply_customizations
+fi
+
+call_hook pre_build
+call_chroot_hook chroot_pre_build
+
+if [ -n "$BUILD_TARGET" ]; then
+	if [ $(expr match "$BUILD_TARGET" "[0-9]*") -ne ${#BUILD_TARGET} ]; then
+		show_error "non numeric build target index specified. use uic build --list to view valid build targets indices"
+		exit 1
+	fi
+	if [ $BUILD_TARGET -ge 0 -a $BUILD_TARGET -lt ${#UIC_TARGET[@]} ]; then
+		show_verbose 2 "Building specific target $BUILD_TARGET..."
+		build_target ${UIC_TARGET[$BUILD_TARGET]}
+	else
+		show_error "invalid build target index specified. use uic build --list to view valid build targets indices"
+		exit 1
+	fi
+else
+	show_verbose 2 "Building all targets..."
+	for target_index in $(seq 0 $((${#UIC_TARGET[@]} - 1))); do
+		show_verbose 2 "Building target $target_index..."
+		build_target ${UIC_TARGET[$target_index]}
+	done
+fi
+
+call_chroot_hook chroot_post_build
+call_hook post_build
+
+show_verbose 2 "Cleaning up chroot special filesystems..."
+chroot_exit

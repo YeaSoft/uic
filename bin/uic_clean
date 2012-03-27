@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script cleans up an Ubuntu installation environment
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# initialize runtime variables
+FORCE=0
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+#####################################
+# function section
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hv] [<environment name>]
+
+Options:
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script enters as chroot into an Ubuntu installation environment
+
+<environment name> can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v --longoptions help,verbose -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+verify_environment $1
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+# play the music
+show_verbose 1 "Cleaning up Ubuntu installation environment..."
+rm -rf "$TARGET/chroot" "$TARGET/output"

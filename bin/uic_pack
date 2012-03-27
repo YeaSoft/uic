@@ -1,0 +1,120 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script packages an installation environment for distribution
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+# initialize runtime variables
+OUTPUTPATH="${UIC_WORKDIR}"
+ONLYUPDATE=0
+
+#####################################
+# basic script functions
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvu] [-o <output path>] [<target name>]
+
+Options:
+ -u, --update                 only update the integrity information
+ -o, --output <output path>   save the resulting archive into <output path>
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script packages an installation environment for distribution
+
+<environment name> can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,o:,u --longoptions help,verbose,output:,update -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-u|--update)			ONLYUPDATE=1; shift;;
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-o|--output)			OUTPUTPATH="$2"; shift 2;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+
+if [ ! -d "${OUTPUTPATH}" ]; then
+	show_error "Output path ${OUTPUTPATH} is not existing."
+	exit 2
+fi
+
+show_verbose 2 "Loading environment configuration..."
+source "$TARGET/uic.conf"
+
+if [ -z ${UIC_SRCNAME} -o -z ${UIC_SRCVERSION} ]; then
+	show_error "Missing identification data in uic.conf."
+	exit 3
+fi
+
+show_verbose 1 "Updating integrity checksums..."
+[ -f "$TARGET/uic.md5" ] && rm "$TARGET/uic.md5"
+MD5TEMP=$(mktemp)
+find "$TARGET" -path "$TARGET/output/*" -prune -o -path "$TARGET/chroot/*" -prune -o -path "$TARGET/uic.md5" -prune -o -type f -print0 | xargs -0 md5sum -b > $MD5TEMP
+SEDFORMULA="s/*"$(echo -n "$TARGET" | sed -e 's/\//\\\//g')"\//*/g" 
+sed -e "$SEDFORMULA" < $MD5TEMP > "$TARGET/uic.md5"
+rm "$MD5TEMP"
+
+if [ $ONLYUPDATE -eq 0 ]; then
+	show_verbose 1 "Packing installation environment..."
+	if [ "${TARGETNAME}" = "${UIC_SRCNAME}" ]; then
+		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" "${TARGETNAME}"
+	else
+		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --transform "s/${TARGETNAME}/${UIC_SRCNAME}/g" "${TARGETNAME}"
+	fi
+	MD5TEMP=$(mktemp)
+	md5sum -b "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" > $MD5TEMP
+	sed -e "s/ \*\/.*\// \*/g" < "$MD5TEMP" > "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.md5"
+	rm "$MD5TEMP"
+fi

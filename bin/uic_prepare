@@ -1,0 +1,157 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script prepares the environment for an Ubuntu installation
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# initialize runtime variables
+FORCE=0
+ENVNAME=
+SRCARCHIVE=
+DESTPATH=
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+#####################################
+# basic script functions
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvF] [-n <name>] <source archive> [<destination path>]
+
+Options:
+ -n, --name                   use an alternative name for the installation environment
+ -F, --force                  force deletion of existing installation environment
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script prepares the environment for an Ubuntu installation
+
+<source archive> can be:
+ - a path to an UIC environment archive (usually a .tar.bz2)
+ - a URL to an UIC environment archive (usually a .tar.bz2) (NOT IMPLEMENTED)
+ - thge base name of an installation environment (e.g.: netpoldo-1004-32)  (NOT IMPLEMENTED)
+
+If <destination path> is omitted, the installation environment will be created in the default
+work directory (usually /usr/src)
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F,n: --longoptions help,verbose,force,name: -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-F|--force)                     FORCE=1; shift;;
+	-n|--name)			ENVNAME="$2"; shift 2;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+if [ -z "$1" ]; then
+	show_error "<source archive> must be specified."
+	exit 3;
+else
+	SRCARCHIVE="$1"
+fi
+if [ -z "$2" ]; then
+	DESTPATH="${UIC_WORKDIR}"
+elif [ "${2:0:1}" = "/" ]; then
+	# absolute path
+	DESTPATH="$2"
+else
+	# relative path
+	DESTPATH="$(pwd)/$2"
+fi
+
+if [ ! -d "${DESTPATH}" ]; then
+	show_error "Destination path ${DESTPATH} does not exist."
+	exit 2;
+fi
+
+if [ "${SRCARCHIVE:0:7}" = "http://" ]; then
+	show_error "http download still not supported."
+	exit 3;
+elif [ "${SRCARCHIVE:0:6}" = "ftp://" ]; then
+	show_error "ftp download still not supported."
+	exit 3;
+elif [ -f "${SRCARCHIVE}" ]; then
+	show_verbose 2 "Source archive ${SRCARCHIVE} is physically reachable. Trying to unpack..."
+fi
+
+TMPDESTINATION="$(mktemp -d)"
+tar -xjpf "${SRCARCHIVE}" --directory "${TMPDESTINATION}"
+test_exec tar tar -xjpf "${SRCARCHIVE}" --directory "${TMPDESTINATION}"
+
+UICLIST=( $(find "${TMPDESTINATION}" -name uic.conf) )
+if [ ${#UICLIST[@]} -eq 0 ]; then
+	rm -rf "${TMPDESTINATION}"
+	show_error "Source archive ${SRCARCHIVE} does not contain a valid installation environment"
+	exit 3
+fi
+
+UICPATH=${UICLIST[0]#${TMPDESTINATION}}
+UICNAME=$(basename "${UICPATH}")
+UICPATH=$(expr match "${UICPATH}" '\(.*\)'\/${UICNAME})
+UICPATH=${UICPATH:1}
+
+if [ -z "${ENVNAME}" ]; then
+	ENVNAME="${UICPATH}"
+fi
+
+/bin/bash
+
+verify_environment "${TMPDESTINATION}/${UICPATH}"
+
+/bin/bash
+
+if [ -d "${DESTPATH}/${ENVNAME}" ]; then
+	if [ ${FORCE} -gt 0 ]; then
+		show_verbose 1 "Destination environment exists but will be replaced"
+		rm -rf "${DESTPATH}/${ENVNAME}"
+	else
+		show_error "Destination environment exists in ${DESTPATH}/${ENVNAME}. Use -F to force cleanup."
+		exit 1
+	fi
+fi
+
+mv "${TMPDESTINATION}/${UICPATH}" "${DESTPATH}/${ENVNAME}"
+rm -rf "${TMPDESTINATION}"

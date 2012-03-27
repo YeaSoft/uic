@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120326
+# This script upgrades an Ubuntu installation environment
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+#####################################
+# variables section
+
+
+# initialize configuration variables by
+# loading default configuration data
+source uic.conf
+
+# initialize runtime variables
+SKIP_CUSTOMIZATION=0
+DO_REINSTALLATIONS=0
+
+# load user customized configuration data
+if [ -e /etc/uic.conf ]; then
+	source /etc/uic.conf
+fi
+
+#####################################
+# basic script functions
+
+# load function library
+. yea_utils
+. uic_utils
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvIC] [<environment name>]
+
+Options:
+ -I, --do-reinstallations     reinstall all default packages
+ -C, --skip-customization     skips the target customization
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script upgrades an Ubuntu installation environment
+
+<environment name> can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,C,I --longoptions help,verbose,skip-customization,do-reinstallations -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
+	-I|--do-reinstallations)	DO_REINSTALLATIONS=1; shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+verify_environment $1
+
+# checks if the installation environment has been populated
+test_environment_empty
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+show_verbose 2 "Loading environment configuration..."
+source "$TARGET/uic.conf"
+
+show_verbose 2 "Preparing chroot special filesystems..."
+init_script
+chroot_init
+
+if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+	apply_customizations
+fi
+
+
+call_hook pre_installation
+call_chroot_hook chroot_pre_installation
+
+show_verbose 1 "Updating package sources..."
+chroot "$TARGET/chroot" apt-get update
+test_exec chroot apt-get update
+show_verbose 1 "Updating system..."
+chroot $TARGET/chroot apt-get -y upgrade
+test_exec chroot "$TARGET/chroot" apt-get -y upgrade
+
+if [ $DO_REINSTALLATIONS -gt 0 ]; then
+	if [ -n "$UIC_SOFTWARE" ]; then
+		show_verbose 1 "Installing software..."
+		chroot "$TARGET/chroot" apt-get -y install $UIC_SOFTWARE
+		test_exec chroot $TARGET/chroot apt-get -y install $UIC_SOFTWARE
+	fi
+	if [ -n "$UIC_KERNEL" ]; then
+		show_verbose 1 "Installing kernel..."
+		chroot "$TARGET/chroot" apt-get -y install $UIC_KERNEL
+		test_exec chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
+	fi
+fi
+
+call_chroot_hook chroot_post_installation
+call_hook post_installation
+
+show_verbose 2 "Cleaning up chroot special filesystems..."
+chroot_exit

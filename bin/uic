@@ -1,0 +1,50 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120319
+# This script is the dispatcher of the Ubuntu Installation Creator
+
+VERSION=0.1
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+
+# load configuration data
+if [ -e /etc/uic.conf ]; then
+        source /etc/uic.conf
+elif [ -e $SCRIPTPATH/uic.conf ]; then
+	source $SCRIPTPATH/uic.conf
+fi
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME <command> [...]
+
+Commands:
+	prepare           prepares an installation environment
+	update            updates the installation environment
+	create            creates the installation
+	upgrade           upgrade an installation
+	enter             chroot's into an installation
+	clean             cleans up an installation
+	build             produces the deliverables of an installation
+
+This is the main dispatch of the Ubuntu Installation Creator (UIC)
+
+EOF
+}
+
+if [ $# -lt 1 ]; then
+	usage
+	exit 1
+fi
+
+if [ ! -x uic_$1 -a ! -x $(which uic_$1) ]; then
+	usage
+	exit 1
+fi
+
+PROGRAM=uic_$1
+shift 1
+
+$PROGRAM $@

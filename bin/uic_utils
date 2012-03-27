@@ -1,0 +1,231 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# VERSION 20120326
+# function collection for the netpoldo development system
+
+SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
+SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
+SPECIALFSMOUNT=0
+OLDHOSTNAME=$(hostname)
+TARGET=
+
+function init_script() {
+	trap cleanup_script INT QUIT TERM EXIT
+}
+
+function cleanup_script() {
+        trap - INT QUIT TERM EXIT
+        chroot_exit
+}
+
+
+function chroot_init() {
+	if [ $SPECIALFSMOUNT -lt 1 ]; then
+		show_verbose 1 "Mounting special file systems in environment..."
+		for fssuff in $SPECIALFSM; do
+			if ! grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
+				mount -o bind ${fssuff} ${TARGET}/chroot${fssuff}
+			fi
+		done
+		SPECIALFSMOUNT=1
+	fi
+}
+
+function chroot_exit() {
+	if [ $SPECIALFSMOUNT -gt 0 ]; then
+		show_verbose 1 "Unmounting special file systems in environment..."
+		for fssuff in $SPECIALFSU; do
+			if grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
+				umount ${TARGET}/chroot${fssuff}
+			fi
+		done
+		SPECIALFSMOUNT=0
+	fi
+	test_mountinuse loop
+}
+
+function test_mountinuse() {
+	while grep "${TARGET}/chroot" /proc/mounts > /dev/null; do
+		echo >&2
+		show_error "WARNING: Apparently there are some special filesystems mounts in use."
+		show_error "         Following you get some useful information for solving the problem."
+		echo >&2
+		echo "Active special filesystem mounts" >&2
+		echo "--------------------------------" >&2
+		grep "${TARGET}/chroot" /proc/mounts >&2
+		echo >&2
+		echo "Active processes on special filesystem mounts" >&2
+		echo "---------------------------------------------" >&2
+		lsof | grep "${TARGET}/chroot/dev\|${TARGET}/chroot/sys\|${TARGET}/chroot/proc"
+		
+		if [ -z $1 ]; then
+			echo >&2
+			echo "Please try to unmount them manually before continuing or reboot." >&2
+			exit 1
+		fi
+		
+		echo "A chroot shell into the target environment will be launched for you" >&2
+		echo "so that you may solve the problem. Upon exiting the shell, the dismount" >&2
+		echo "will be attempted again." >&2
+		echo "ENTERING CHROOT SHELL...." >&2
+		export debian_chroot="${TARGET} Environment"
+		chroot "${TARGET}/chroot" /bin/bash
+		# trying again to dismount
+		for fssuff in $SPECIALFSU; do
+			if grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
+				umount ${TARGET}/chroot${fssuff}
+			fi
+		done
+	done
+}
+
+
+function find_environment() {
+	if [ $# -lt 1 ]; then
+		# no environment name specified. It must be here....
+		test_environment "$(pwd)"
+		TARGET="$(pwd)"
+	elif [ "${1:0:1}" = "/" ]; then
+		# absolute path specified
+		test_environment "$1"
+		TARGET="$1"
+	elif [ -d "$(pwd)/$1" ]; then
+		# specified environment under the current directory?
+		test_environment "$(pwd)/$1"
+		TARGET="$(pwd)/$1"
+	elif [ -d "${UIC_WORKDIR}/$1" ]; then
+		# specified environment under the default working directory?
+		test_environment "${UIC_WORKDIR}/$1"
+		TARGET="${UIC_WORKDIR}/$1"
+	else
+		show_error "Environment $1 does not exist"
+		exit 2
+	fi
+	TARGETNAME=$(basename ${TARGET})
+	TARGETPATH=$(dirname ${TARGET})
+}
+
+function test_environment() {
+	if [ ! -d "$1" ]; then
+		show_error "Environment $1 does not exist"
+		exit 1
+	fi
+
+	if [ ! -f "$1/uic.conf" ]; then
+		show_error "Environment $1 does not contain a configuration file"
+		exit 1
+	fi
+
+	if [ ! -d "$1/files" ]; then
+		show_error "Environment $1 is invalid"
+		exit 1
+	fi
+
+#	if [ $(expr match "$1" '.*\/.*') -ne 0 ]; then
+#		show_error "Target $1 cannot be a path"
+#		exit 1
+#	fi
+}
+
+function test_environment_empty() {
+	if [ $(find "${TARGET}/chroot" | wc -l) -lt 2 ]; then
+		show_error "Environment is empty. Use 'uic create' to create a new one."
+		exit 1
+	fi
+}
+
+function cleanup_environment() {
+	show_verbose 1 "Cleaning up installation environment..."
+	cp $(which machine_cleanup) "${TARGET}/chroot/root/machine_cleanup"
+	chroot  "${TARGET}/chroot" /root/machine_cleanup $1 -Alpc
+	rm "${TARGET}/chroot/root/machine_cleanup"
+}
+
+function verify_environment() {
+	if [ -z "$1" ]; then
+		TESTPATH=${TARGET}
+	else
+		TESTPATH=${1}
+	fi
+	if [ ! -f "${TESTPATH}/uic.md5" ]; then
+		show_verbose 1 "No integrity checksums found."
+		return 0;
+	fi
+	show_verbose 2 "Testing integrity checksums"
+	MD5TEMP=$(mktemp)
+	SEDFORMULA="s/ \*/ \*"$(echo -n "$TESTPATH" | sed -e 's/\//\\\//g')"\//g" 
+	sed -e "$SEDFORMULA" < "${TESTPATH}/uic.md5" > "$MD5TEMP"
+	md5sum --quiet -c "$MD5TEMP"
+	if [ $? -ne 0 ]; then
+		show_warning "Environment integrity error."
+		rm "$MD5TEMP"
+		return 1
+	fi
+	rm "$MD5TEMP"
+	return 0
+}
+
+function test_prereq() {
+	if [ -z $(which debootstrap) ]; then
+		show_error "Package debootstrap not installed."
+		exit 1
+	fi
+
+	if [ -z $(which mksquashfs) ]; then
+		show_error "Package squashfs-tools not installed."
+		exit 1
+	fi
+
+	if [ -z $(which machine_cleanup) ]; then
+		show_error "Script machine_cleanup not installed."
+		exit 1
+	fi
+}
+
+function call_hook() {
+	if [ -z "$1" ]; then
+		return 0
+	fi
+	show_verbose 3 "Searching hook $1..."
+	if [ -x "${TARGET}/hooks/$1" ]; then
+		show_verbose 2 "Executing hook $1..."
+		source "${TARGET}/hooks/$1"
+		test_exec $1
+	fi
+}
+
+function call_chroot_hook() {
+	if [ -z "$1" ]; then
+		return 0
+	fi
+	show_verbose 3 "Searching chroot hook $1..."
+	if [ -x "${TARGET}/hooks/$1" ]; then
+		show_verbose 2 "Copying chroot hook $1 into the installation environment..."
+		cp "${TARGET}/hooks/$1" "${TARGET}/chroot/tmp"
+		show_verbose 2 "Executing hook $1..."
+		chroot "$TARGET/chroot" "/tmp/$1"
+		test_exec $1
+		show_verbose 2 "Removing chroot hook $1 from the installation environment..."
+		rm "${TARGET}/chroot/tmp/$1"
+	fi
+}
+
+function apply_customizations() {
+	if [ -z "$1" ]; then
+		CUST_SUBDIR="files"
+	else
+		CUST_SUBDIR="$1"
+	fi
+	show_verbose 1 "Applying customizations to the target installation environment..."
+	call_hook pre_customization
+	call_chroot_hook chroot_pre_customization
+	cp -a "$TARGET/$CUST_SUBDIR/." "$TARGET/chroot/"
+	if [ -f "${TARGET}/$CUST_SUBDIR.remove" ]; then
+		xargs -r -a "${TARGET}/$CUST_SUBDIR.remove" rm -rf
+	fi
+	call_chroot_hook chroot_post_customization
+	call_hook post_customization
+}
+
