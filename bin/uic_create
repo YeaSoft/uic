@@ -123,8 +123,10 @@ chroot "$TARGET/chroot" dpkg-reconfigure locales
 test_exec chroot chroot $TARGET/chroot dpkg-reconfigure locales
 if [ -n "$UIC_RECONFIGURE" ]; then
 	show_verbose 1 "Configuring packages..."
-	chroot "$TARGET/chroot" dpkg-reconfigure $UIC_RECONFIGURE
-	test_exec chroot chroot $TARGET/chroot dpkg-reconfigure $UIC_RECONFIGURE
+	for RECO_PACKAGE in $UIC_RECONFIGURE; do
+		chroot "$TARGET/chroot" dpkg-reconfigure $RECO_PACKAGE
+		test_exec chroot chroot $TARGET/chroot dpkg-reconfigure $RECO_PACKAGE
+	done
 fi
 show_verbose 1 "Updating system..."
 chroot $TARGET/chroot apt-get -y upgrade
