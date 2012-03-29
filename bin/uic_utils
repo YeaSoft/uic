@@ -19,71 +19,114 @@ TARGET=
 
 function init_script() {
 	trap cleanup_script INT QUIT TERM EXIT
+        call_hook init_script
 }
 
 function cleanup_script() {
         trap - INT QUIT TERM EXIT
+        call_hook exit_script
         chroot_exit
+        cleanup_mounts
 }
 
 
 function chroot_init() {
 	if [ $SPECIALFSMOUNT -lt 1 ]; then
 		show_verbose 1 "Mounting special file systems in environment..."
-		for fssuff in $SPECIALFSM; do
-			if ! grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
-				mount -o bind ${fssuff} ${TARGET}/chroot${fssuff}
-			fi
-		done
+		mount_special
 		SPECIALFSMOUNT=1
 	fi
+}
+
+function mount_special() {
+	for MOUNT_POINT in $SPECIALFSM; do
+		if ! grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
+			mount -o bind ${MOUNT_POINT} ${TARGET}/chroot${MOUNT_POINT}
+		fi
+	done
+}
+
+function umount_special() {
+	for MOUNT_POINT in $SPECIALFSU; do
+		if grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
+			umount ${TARGET}/chroot${MOUNT_POINT}
+		fi
+	done
 }
 
 function chroot_exit() {
 	if [ $SPECIALFSMOUNT -gt 0 ]; then
 		show_verbose 1 "Unmounting special file systems in environment..."
-		for fssuff in $SPECIALFSU; do
-			if grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
-				umount ${TARGET}/chroot${fssuff}
-			fi
-		done
+		umount_special 2> /dev/null
 		SPECIALFSMOUNT=0
 	fi
-	test_mountinuse loop
 }
 
 function test_mountinuse() {
+	if grep "${TARGET}/chroot" /proc/mounts; then
+		show_error "WARNING: There are active mounts in the installation environment probably"
+		show_error "         because of an active preparation session. The execution will be"
+		show_error "         terminated in order to prevent damage to the instllation environment"
+		exit 5
+	fi	
+}
+
+function cleanup_mounts() {
+	if grep "${TARGET}/chroot" /proc/mounts; then
+		# let's try to unmount them
+		for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+			umount ${MOUNT_POINT} 2> /dev/null
+		done
+	fi
+	if [ -z $1 ]; then
+		SHELL_REPEAT=3
+	else
+		SHELL_REPEAT=$(($1))
+	fi
 	while grep "${TARGET}/chroot" /proc/mounts > /dev/null; do
 		echo >&2
-		show_error "WARNING: Apparently there are some special filesystems mounts in use."
-		show_error "         Following you get some useful information for solving the problem."
+		show_error "WARNING: There are some active mounts in the installation environment that"
+		show_error "         cannot be unmounted automatically because probably they are still"
+		show_error "         in use by some running process."
+		show_error "         Following you get some useful information for solving the problem"
+		show_error "         manually."
 		echo >&2
-		echo "Active special filesystem mounts" >&2
+		echo "Active filesystem mounts" >&2
 		echo "--------------------------------" >&2
-		grep "${TARGET}/chroot" /proc/mounts >&2
+		grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}' >&2
 		echo >&2
-		echo "Active processes on special filesystem mounts" >&2
-		echo "---------------------------------------------" >&2
-		lsof | grep "${TARGET}/chroot/dev\|${TARGET}/chroot/sys\|${TARGET}/chroot/proc"
+		echo "Active processes having open handles on the mountpoints" >&2
+		echo "-------------------------------------------------------" >&2
+		for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+			lsof | grep ${MOUNT_POINT} >&2
+		done
 		
-		if [ -z $1 ]; then
+		if [ ${SHELL_REPEAT} -lt 1 ]; then
 			echo >&2
 			echo "Please try to unmount them manually before continuing or reboot." >&2
 			exit 1
 		fi
 		
 		echo "A chroot shell into the target environment will be launched for you" >&2
-		echo "so that you may solve the problem. Upon exiting the shell, the dismount" >&2
-		echo "will be attempted again." >&2
+		(( SHELL_REPEAT-- ))
+		if [ ${SHELL_REPEAT} -lt 1 ]; then
+			echo "so that you may solve the problem." >&2
+		else
+			echo "so that you may solve the problem. Upon exiting the shell, the dismount" >&2
+			echo "will be attempted again." >&2
+		fi
 		echo "ENTERING CHROOT SHELL...." >&2
+		mount_special		
 		export debian_chroot="${TARGET} Environment"
 		chroot "${TARGET}/chroot" /bin/bash
-		# trying again to dismount
-		for fssuff in $SPECIALFSU; do
-			if grep "${TARGET}/chroot${fssuff}" /proc/mounts > /dev/null; then
-				umount ${TARGET}/chroot${fssuff}
-			fi
-		done
+
+		if grep "${TARGET}/chroot" /proc/mounts; then
+			# trying again to dismount
+			umount_special 2> /dev/null
+			for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+				umount ${MOUNT_POINT} 2> /dev/null
+			done
+		fi
 	done
 }
 
@@ -142,11 +185,78 @@ function test_environment_empty() {
 	fi
 }
 
+function test_builder_comaptibility() {
+	MY_ARCH=$(dpkg-query -W -f='${Architecture}\n' dpkg)
+	if [ "${MY_ARCH}" = "${UIC_ARCH}" ]; then
+		show_verbose 2 "Target has the same architecture (${MY_ARCH})"
+		return 0
+	fi
+	case "${MY_ARCH}" in
+	"amd64")	if [ "${UIC_ARCH}" = "i386" ]; then
+				show_verbose 2 "Target has a compatible architecture"
+				return 0
+			fi
+			;;
+	esac
+	show_error "Target architecture ${UIC_ARCH} not compatible with ${MY_ARCH}"
+	exit 3;
+}
+
+function cleanup_apt_cache() {
+	show_verbose 2 "Cleaning up APT cache"
+	if [ -z "$1" ]; then
+		apt-get clean
+	else
+		chroot "$1" apt-get clean
+	fi
+}
+
+function cleanup_apt_all() {
+	show_verbose 2 "Cleaning up all APT files"
+	rm -f $1/var/lib/apt/cdroms.list~
+	rm -rf $1/var/lib/apt/lists/
+	mkdir -p $1/var/lib/apt/lists/partial
+	touch $1/var/lib/apt/lists/partial/.delete-me-later
+	rm -rf $1/var/cache/apt
+	mkdir -p $1/var/cache/apt/archives/partial
+}
+
+function cleanup_log_all() {
+	show_verbose 2 "Cleaning up log files"
+	logfiles="$(find $1/var/log -name '*.[0-9]*')"
+	logfiles="$logfiles $(find $1/var/log -name '*.gz')"
+	for logfile in $logfiles; do
+		show_verbose 3 "Deleting $logfile"
+	        rm -f "$logfile"
+	done
+	for logfile in $(find "$1/var/log" -type f); do
+		show_verbose 3 "Truncating $logfile"
+		>"$logfile"
+	done
+}
+
+function cleanup_history() {
+	show_verbose 2 "Removing history files of user root"
+	rm -f $1/root/.*_history
+}
+
+function cleanup_fixed_devices() {
+	show_verbose 2 "Cleaning up persistent device assignments"
+	rm -f $1/etc/udev/rules.d/70-persistent-cd.rules
+	rm -f $1/etc/udev/rules.d/70-persistent-net.rules
+}
+
+function cleanup_all() {
+	cleanup_apt_cache $1
+	cleanup_apt_all $1
+	cleanup_log_all $1
+	cleanup_history $1
+	cleanup_fixed_devices $1
+}
+
 function cleanup_environment() {
 	show_verbose 1 "Cleaning up installation environment..."
-	cp $(which machine_cleanup) "${TARGET}/chroot/root/machine_cleanup"
-	chroot  "${TARGET}/chroot" /root/machine_cleanup $1 -Alpc
-	rm "${TARGET}/chroot/root/machine_cleanup"
+	cleanup_all "${TARGET}/chroot"
 }
 
 function verify_environment() {
@@ -176,16 +286,6 @@ function verify_environment() {
 function test_prereq() {
 	if [ -z $(which debootstrap) ]; then
 		show_error "Package debootstrap not installed."
-		exit 1
-	fi
-
-	if [ -z $(which mksquashfs) ]; then
-		show_error "Package squashfs-tools not installed."
-		exit 1
-	fi
-
-	if [ -z $(which machine_cleanup) ]; then
-		show_error "Script machine_cleanup not installed."
 		exit 1
 	fi
 }
@@ -235,3 +335,26 @@ function apply_customizations() {
 	call_hook post_customization
 }
 
+function get_filtered_repository() {
+	if [ -z "${UIC_APTPROXY}" ]; then
+		echo ${UIC_REPOSITORY}
+	else
+		echo ${UIC_REPOSITORY} | sed -e "s/http:\/\/[^\/]*/http:\/\/${UIC_APTPROXY}/g"
+	fi
+}
+
+function init_apt_proxy() {
+	if [ -z "${UIC_APTPROXY}" ]; then
+		return 0
+	fi
+	if [ -f "$TARGET/chroot/etc/apt/sources.list" ]; then
+		mv "$TARGET/chroot/etc/apt/sources.list" "$TARGET/chroot/etc/apt/sources.list.BACKUP"
+		sed -e "s/http:\/\/[^\/]*/http:\/\/${UIC_APTPROXY}/g" < "$TARGET/chroot/etc/apt/sources.list.BACKUP" > "$TARGET/chroot/etc/apt/sources.list"
+	fi
+}
+
+function exit_apt_proxy() {
+	if [ -f "$TARGET/chroot/etc/apt/sources.list.BACKUP" ]; then
+		mv "$TARGET/chroot/etc/apt/sources.list.BACKUP" "$TARGET/chroot/etc/apt/sources.list"
+	fi
+}

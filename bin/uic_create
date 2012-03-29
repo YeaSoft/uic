@@ -100,10 +100,13 @@ fi
 show_verbose 2 "Loading environment configuration..."
 source "$TARGET/uic.conf"
 
+# check builder compatibility
+test_builder_comaptibility
+
 show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
 call_hook pre_debootstrap
-debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" ${UIC_REPOSITORY}
-test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" ${UIC_REPOSITORY}
+debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
 call_hook post_debootstrap
 
 show_verbose 2 "Preparing chroot special filesystems..."
@@ -116,19 +119,29 @@ call_hook pre_installation
 call_chroot_hook chroot_pre_installation
 
 show_verbose 1 "Updating package sources..."
+init_apt_proxy
 chroot "$TARGET/chroot" apt-get update
 test_exec chroot chroot apt-get update
+exit_apt_proxy
 show_verbose 1 "Creating locales..."
 chroot "$TARGET/chroot" dpkg-reconfigure locales
 test_exec chroot chroot $TARGET/chroot dpkg-reconfigure locales
 if [ -n "$UIC_RECONFIGURE" ]; then
 	show_verbose 1 "Configuring packages..."
-	for RECO_PACKAGE in $UIC_RECONFIGURE; do
-		chroot "$TARGET/chroot" dpkg-reconfigure $RECO_PACKAGE
-		test_exec chroot chroot $TARGET/chroot dpkg-reconfigure $RECO_PACKAGE
+	for RECONF_PACKAGE in $UIC_RECONFIGURE; do
+		RECONF_PKG=$(echo ${RECONF_PACKAGE} | cut -d: -f 1)
+		RECONF_MODE=$(echo ${RECONF_PACKAGE} | cut -d: -f 2)
+		if [ -z "${RECONF_MODE}" ]; then
+			chroot "$TARGET/chroot" dpkg-reconfigure ${RECONF_PKG}
+			test_exec chroot chroot "$TARGET/chroot" dpkg-reconfigure ${RECONF_PKG}
+		else
+			chroot "$TARGET/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			test_exec chroot chroot "$TARGET/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+		fi
 	done
 fi
 show_verbose 1 "Updating system..."
+init_apt_proxy
 chroot $TARGET/chroot apt-get -y upgrade
 test_exec chroot chroot "$TARGET/chroot" apt-get -y upgrade
 if [ -n "$UIC_SOFTWARE" ]; then
@@ -141,6 +154,7 @@ if [ -n "$UIC_KERNEL" ]; then
 	chroot "$TARGET/chroot" apt-get -y install $UIC_KERNEL
 	test_exec chroot chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
 fi
+exit_apt_proxy
 
 case "${UIC_ROOTPASSWORD}" in
 "")	show_warning "Password will not be initialized"

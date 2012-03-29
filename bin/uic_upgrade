@@ -89,6 +89,9 @@ test_mountinuse
 show_verbose 2 "Loading environment configuration..."
 source "$TARGET/uic.conf"
 
+# check builder compatibility
+test_builder_comaptibility
+
 show_verbose 2 "Preparing chroot special filesystems..."
 init_script
 chroot_init

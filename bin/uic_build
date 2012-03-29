@@ -282,7 +282,6 @@ function build_target_squashfs {
 	call_hook post_build_squashfs
 }
 
-
 #####################################
 # script section
 
@@ -324,6 +323,9 @@ test_mountinuse
 
 show_verbose 2 "Loading environment configuration..."
 source "$TARGET/uic.conf"
+
+# check builder compatibility
+test_builder_comaptibility
 
 if [ $LIST_TARGETS -gt 0 ]; then
 	list_targets
