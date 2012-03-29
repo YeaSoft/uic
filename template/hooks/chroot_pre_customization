@@ -3,7 +3,7 @@
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
 # uic chroot hook:	chroot_pre_customization
-# called by:		uic_create, uic_build
+# called by:		uic_create, uic_build, uic_upgrade
 #
 # This hook will be called by several command in the chrooted installation
 # environment in $TARGET before making any customizations (file copies and
