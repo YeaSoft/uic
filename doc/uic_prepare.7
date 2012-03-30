@@ -15,10 +15,10 @@ uic_prepare - prepares an installation environment based on the specified templa
 .SH DESCRIPTION
 .BR "uic_prepare " "initializes an installation environment based on a uic template source. Template sources
 are distributed as compressed tar archives.
-.BR "uic_prepare " "retrieves the specified template, unpacks it into the default or the
-specified destination path and checks it for integrity.
-.RI "The " "template source " "can be a physical path to a locally reachable template file,
-an http or ftp url to a template file or simply the base name of a template. In that case 
+.BR "uic_prepare " "retrieves the specified template, unpacks it into the default or the specified
+.IR "<destination path> " "and checks it for integrity. The " "<template source> " "can be a physical path
+to a locally reachable template file, an http or ftp url to a template file or simply the base name of a
+template. In that case 
 .BR "uic_prepare " "will search the configured uic repositories for the latest version of the
 desired template.
 
@@ -40,7 +40,7 @@ a derived template, the name should be changed manually also in the template con
 .TP
 .B -F, --force
 .RB "force deletion of existing installation environment. Since " "uic_prepare " "will not overwrite by default
-existing installation environments found the destination directory, this option permits to execute the command
+existing installation environments found in the destination directory, this option permits to execute the command
 also if there is already an installation environment in place.
 
 
@@ -71,7 +71,7 @@ already existing.
 .I /etc/uic.conf
 .RB "uic configuration file. See " uic.conf (8)
 .TP
-.I <template>/uictp.conf
+.I <template>/uictpl.conf
 .RB "template definition and configuration file. See " uic.files (7)
 .TP
 .I <template>/hooks
