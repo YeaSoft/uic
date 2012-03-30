@@ -1,0 +1,124 @@
+.TH uic 7 "29 March 2012" "Version 0.3" "Ubuntu Installation Creator"
+.SH NAME
+uic - The Ubuntu Installation Creator
+
+.SH SYNOPSIS
+.SP
+.B uic 
+.I <command>
+.B [
+.I <args>
+.B ]
+
+.SH DESCRIPTION
+.B uic
+.R is a toolkit for easy Ubuntu/Debian installations creation
+
+.PP
+uic permits to automate the creation of customized command line Linux installations based
+on Debian-Style distributions. It is mainly intended as a toolkit for system administrators who
+have often to install linux servers with particular, repeating characteristics.
+.PP
+Customized installations are based on easy to create installation templates.
+
+.SH COMMANDS
+.B uic
+.R itself is intended as a wrapper for a series of available commands. They can be invoked via
+.B uic
+.R or directly. The invocation of
+
+.RS
+.B uic create -vv netpoldo-1004-32
+
+.RE
+.R behaves identically to invoking
+
+.RS
+.B uic_create -vv netpoldo_1004-32
+.RE
+
+.R The following commands are available:
+
+.TP
+.B uic_prepare
+prepares an installation environment based on the specified template
+
+.TP
+.B uic_update
+updates the installation environment based on the specified template
+
+.TP
+.B uic_create
+creates the installation in the specified installation environment
+
+.TP
+.B uic_upgrade
+upgrades the installation in the specified installation environment
+
+.TP
+.B uic_enter
+chroots into the installation in the specified installation envinronment
+
+.TP
+.B uic_clean
+deletes the installation from the specified installation environemnt
+
+.TP
+.B uic_build
+executes a build/deployment process of the installation in the specified installation environment
+
+.TP
+.B uic_pack
+packages an installation environment for redistribution as a uic template
+
+
+.SH EXAMPLE
+Full process to create a minimal NetPoldo Ubuntu rescue system:
+
+.PP
+     builder-machine # uic prepare netpoldo-1004-32
+     [ ... installs the latest netpoldo-1004-32 uic template environment in /usr/src ]
+     builder-machine # uic create netpoldo-1004-32 -v
+     [ ... watch it while it creates the installation environent ]
+     builder-machine # uic-build -v netpoldo-1004-32
+     [ ... find the results in /usr/src/netpoldo-1004-32/output ]
+
+.SH AUTHOR
+.B uic
+.R was written by Leo Moll <leo.moll@yeasoft.com>
+
+.SH FILES
+.TP 26n
+.I /etc/uic.conf
+.RB "uic configuration file. See " uic.conf (8)
+.TP
+.I <template>/uictp.conf
+.RB "template definition and configuration file. See " uic.files (7)
+.TP
+.I <template>/hooks
+.RB "template hook scripts directory See " uic.hooks (7)
+.TP
+.I <template>/files
+.RB "directory of files to add to the installation. See " uic.files (7)
+.TP
+.I <template>/files.remove
+.RB "list of files to remove from the installation. See " uic.files (7)
+.TP
+.I <template>/build
+.RB "directory of additional files used during the build steps. See " uic.files (7)
+
+.SH AUTHOR
+.B uic
+.R was written by Leo Moll <leo.moll@yeasoft.com>
+
+.SH "SEE ALSO"
+.BR uic_build (7),
+.BR uic_clean (7),
+.BR uic_create (7),
+.BR uic_enter (7),
+.BR uic_pack (7),
+.BR uic_prepare (7),
+.BR uic_upgrade (7),
+.BR uic.files (7),
+.BR uic.hooks (7),
+.BR uic.conf (7)

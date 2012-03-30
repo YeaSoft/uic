@@ -1,0 +1,103 @@
+.TH uic_prepare 7 "29 March 2012" "Version 0.3" "Ubuntu Installation Creator"
+.SH NAME
+uic_prepare - prepares an installation environment based on the specified template
+
+.SH SYNOPSIS
+.SP
+.B uic_prepare [-hvF] [-n 
+.I <name>
+.B ] 
+.I <template source>
+.B [
+.I <destination path>
+.B ]
+
+.SH DESCRIPTION
+.BR "uic_prepare " "initializes an installation environment based on a uic template source. Template sources
+are distributed as compressed tar archives.
+.BR "uic_prepare " "retrieves the specified template, unpacks it into the default or the
+specified destination path and checks it for integrity.
+.RI "The " "template source " "can be a physical path to a locally reachable template file,
+an http or ftp url to a template file or simply the base name of a template. In that case 
+.BR "uic_prepare " "will search the configured uic repositories for the latest version of the
+desired template.
+
+.SH OPTIONS
+.TP
+.B -h, --help
+shows the help for the command.
+
+.TP
+.B -v, --verbose
+increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+
+.TP
+.B -n <name>, --name=<name>
+use an alternative name instead of the original name for the installation environment. When used for creating
+a derived template, the name should be changed manually also in the template configuration file
+.B uictp.conf
+
+.TP
+.B -F, --force
+.RB "force deletion of existing installation environment. Since " "uic_prepare " "will not overwrite by default
+existing installation environments found the destination directory, this option permits to execute the command
+also if there is already an installation environment in place.
+
+
+.SH EXAMPLES
+
+.TP
+.B uic prepare /home/leo/netpoldo-1004-32_10.04.04-39.tar.bz2 /home/leo/uic-projects
+prepares an uic installation environment from the template /home/leo/netpoldo-1004-32_10.04.04-39.tar.bz2.
+The resulting template will be stored in /home/leo/uic-projects using the default template name (resulting
+in /home/leo/uic-projects/netpoldo-1004-32).
+
+.TP
+.B uic prepare netpoldo-1004-32
+searches the uic template repository for the latest version of netpoldo-1004-32. If found, the template will
+be downloaded and an installation environment will be created in the default working directory (/usr/src)
+using the default template name (resulting in /usr/src/netpoldo-1004-32).
+
+.TP
+.B uic prepare alix-rescue_10.04.04-12.tar.bz2 -vF -n alix-router .
+prepares an uic isntallation environemnt from the template alix-rescue_10.04.04-12.tar.bz2 located in the current
+directory. The resulting template will be stored also in the current directory using the specified template name
+(resulting in ./alix-router). The command will produce verbose output and will succeed also if ./alix-router is
+already existing.
+
+
+.SH FILES
+.TP 26n
+.I /etc/uic.conf
+.RB "uic configuration file. See " uic.conf (8)
+.TP
+.I <template>/uictp.conf
+.RB "template definition and configuration file. See " uic.files (7)
+.TP
+.I <template>/hooks
+.RB "template hook scripts directory See " uic.hooks (7)
+.TP
+.I <template>/files
+.RB "directory of files to add to the installation. See " uic.files (7)
+.TP
+.I <template>/files.remove
+.RB "list of files to remove from the installation. See " uic.files (7)
+.TP
+.I <template>/build
+.RB "directory of additional files used during the build steps. See " uic.files (7)
+
+.SH AUTHOR
+.B uic
+.R was written by Leo Moll <leo.moll@yeasoft.com>
+
+.SH "SEE ALSO"
+.BR uic_build (7),
+.BR uic_clean (7),
+.BR uic_create (7),
+.BR uic_enter (7),
+.BR uic_pack (7),
+.BR uic_prepare (7),
+.BR uic_upgrade (7),
+.BR uic.files (7),
+.BR uic.hooks (7),
+.BR uic.conf (7)
