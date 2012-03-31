@@ -1,4 +1,4 @@
-.TH uic_create 7 "29 March 2012" "Version 0.3" "Ubuntu Installation Creator"
+.TH uic_create 7 "31 March 2012" "Version 0.5" "Ubuntu Installation Creator"
 .SH NAME
 uic_create - creates an installation in the specified installation environment
 
@@ -10,7 +10,13 @@ uic_create - creates an installation in the specified installation environment
 
 .SH DESCRIPTION
 .B uic_create
-.R creates an installation into the specified installation environment.
+.R creates an installation into the specified installation environment as specified in the template
+definition file.
+.PP
+.RI "The special filesystems " "/sys" ", " "/proc" ", " "/dev" ", " "/dev/pts" " and " "/dev/shm "
+are mounted in the installation in order to offer full functionality during the installation. The
+undesired automatic start of services performed by software installation is inhibited by a temporary
+.RI "policy (" "/usr/sbin/policy-rc.d" " fails with return code 101)."
 
 .IR "<environment_path> " "can be omitted if the command is launched from within the environment
 directory. Otherwise it can be:
@@ -44,20 +50,16 @@ already an installation in place.
 
 .TP
 .B uic_create -F /home/leo/uic-projects/netpoldo-1004-32
-creates an installation in the installation environment in /home/leo/uic-projects/netpoldo-1004-32. If there
-is already an installation, it will be deleted and replaced by the new installation. The results can be found in
-/home/leo/uic-projects/netpoldo-1004-32/chroot
-
+.RI "creates an installation in the installation environment in " "/home/leo/uic-projects/netpoldo-1004-32" ". If"
+there is already an installation, it will be deleted and replaced by the new installation. The results can be
+.RI "found in " "/home/leo/uic-projects/netpoldo-1004-32/chroot" "."
 
 .TP
 .B uic_create -v
 if the current directory is the home of an installation environment (the
-.I uictpl.conf
-.R file is there), an installation is created in the
-.I chroot
-.R subdirectory. The command will produce verbose output and will fail if an installation is already present in the
-.I chroot
-.R directory.
+.IR "uictpl.conf " "file is there), an installation is created in the " "chroot "
+subdirectory. The command will produce verbose output and will fail if an installation is already
+.RI "present in the " "chroot " "directory."
 
 
 .SH FILES

@@ -1,0 +1,101 @@
+.TH uic_prepare 7 "31 March 2012" "Version 0.5" "Ubuntu Installation Creator"
+.SH NAME
+uic_pack - packages an installation environment for redistribution as a uic template
+
+.SH SYNOPSIS
+.SP
+.B uic_pack [-hvu] [
+.I -o <output path>
+.B ] [
+.I <environment_path>
+.B ]
+
+.SH DESCRIPTION
+.B uic_pack
+.RI "creates or updates the integrity information (" "uictpl.md5" ") and packages an"
+installation environment for redistribution as a uic template. The resulting distribution
+archive (a bzippped tar file) will be named
+.PP
+.RS
+.B ${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2
+.RE
+.PP
+.RI "based on the values in " "uictpl.conf " "of the installation environment and is by default"
+saved in the default working path (/usr/src).
+
+.IR "<environment_path> " "can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+.IP -
+an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
+.IP -
+a path to the environment directory relative to the current directory
+.IP -
+a path to the environment directory relative to the default working path (usually /usr/src)
+
+.SH OPTIONS
+.TP
+.B -h, --help
+shows the help for the command.
+
+.TP
+.B -v, --verbose
+increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+
+.TP
+.B -u, --update
+only update the integrity information
+
+.TP
+.B -o <output path>, --output <output path>
+save the resulting archive into <output path>
+
+.SH EXAMPLES
+
+.TP
+.B uic_pack -u /home/leo/uic-projects/netpoldo-1004-32
+.RI "creates or updates the integrity information (" "uictpl.md5" ") in the installation"
+.RI "environment in " "/home/leo/uic-projects/netpoldo-1004-32" "."
+
+.TP
+.B uic_pack -v
+if the current directory is the home of an installation environment (the
+.IR "uictpl.conf " "file is there), the integrity information (" "uictpl.md5" ") will be"
+updated and a template redistribution archive will be created in the default working path
+(/usr/src). The command will produce verbose output.
+
+
+.SH FILES
+.TP 26n
+.I /etc/uic.conf
+.RB "uic configuration file. See " uic.conf (8)
+.TP
+.I <template>/uictpl.conf
+.RB "template definition and configuration file. See " uic.files (7)
+.TP
+.I <template>/hooks
+.RB "template hook scripts directory See " uic.hooks (7)
+.TP
+.I <template>/files
+.RB "directory of files to add to the installation. See " uic.files (7)
+.TP
+.I <template>/files.remove
+.RB "list of files to remove from the installation. See " uic.files (7)
+.TP
+.I <template>/build
+.RB "directory of additional files used during the build steps. See " uic.files (7)
+
+.SH AUTHOR
+.B uic
+.R was written by Leo Moll <leo.moll@yeasoft.com>
+
+.SH "SEE ALSO"
+.BR uic_build (7),
+.BR uic_clean (7),
+.BR uic_create (7),
+.BR uic_enter (7),
+.BR uic_pack (7),
+.BR uic_prepare (7),
+.BR uic_upgrade (7),
+.BR uic.files (7),
+.BR uic.hooks (7),
+.BR uic.conf (7)

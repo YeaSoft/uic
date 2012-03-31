@@ -2,18 +2,20 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120326
+# Version 20120330
 # This script prepares the environment for an Ubuntu installation
 
 #####################################
-# variables section
+# script initialization
 
-# initialize configuration variables by
-# loading default configuration data
-source uic.conf
+# load function library
+source uic_utils
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
+#####################################
+# variables section
 
 # initialize runtime variables
 FORCE=0
@@ -23,10 +25,6 @@ DESTPATH=
 
 #####################################
 # function section
-
-# load function library
-source yea_utils
-source uic_utils
 
 function usage {
 	cat <<EOF

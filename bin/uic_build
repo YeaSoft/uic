@@ -2,18 +2,20 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120326
+# Version 20120331
 # This script produces the deliverables of an Ubuntu installation environment
 
 #####################################
-# variables section
+# script initialization
 
-# initialize configuration variables by
-# loading default configuration data
-source uic.conf
+# load function library
+source uic_utils
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
+#####################################
+# variables section
 
 # initialize runtime variables
 SKIP_CUSTOMIZATION=0
@@ -23,10 +25,6 @@ VBPARAM=""
 
 #####################################
 # function section
-
-# load function library
-source yea_utils
-source uic_utils
 
 function usage {
 	cat <<EOF
@@ -315,24 +313,27 @@ test_prereq
 find_environment $1
 verify_environment $1
 
-# checks if the installation environment has been populated
-test_environment_empty
-
-# checks if nobody other is working in the environment
-test_mountinuse
-
+# load target configuration
 show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uic.conf"
-
-# check builder compatibility
-test_builder_comaptibility
+source "$TARGET/uictpl.conf"
+[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
+test_environment_configuration
 
 if [ $LIST_TARGETS -gt 0 ]; then
 	list_targets
 	exit $?
 fi
 
+# check builder compatibility
+test_builder_compatibility
 
+# checks if the installation environment has been populated
+test_environment_empty
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+# play the music
 show_verbose 2 "Preparing chroot special filesystems..."
 init_script
 chroot_init

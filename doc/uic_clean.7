@@ -1,0 +1,87 @@
+.TH uic_prepare 7 "31 March 2012" "Version 0.5" "Ubuntu Installation Creator"
+.SH NAME
+uic_clean - deletes the installation from the specified installation environment
+
+.SH SYNOPSIS
+.SP
+.B uic_clean [-hv] [
+.I <environment_path>
+.B ]
+
+.SH DESCRIPTION
+.B uic_clean
+.R deletes the installation from the specified installation environment.
+
+.IR "<environment_path> " "can be omitted if the command is launched from within the environment
+directory. Otherwise it can be:
+.IP -
+an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
+.IP -
+a path to the environment directory relative to the current directory
+.IP -
+a path to the environment directory relative to the default working path (usually /usr/src)
+.PP
+.RI "As a result, both the installation in the " "chroot "
+.RI "subdirectory and the build results in the " "output " "subdirectory of the environment"
+will be deleted.
+
+.SH OPTIONS
+.TP
+.B -h, --help
+shows the help for the command.
+
+.TP
+.B -v, --verbose
+increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+
+
+.SH EXAMPLES
+
+.TP
+.B uic_clean /home/leo/uic-projects/netpoldo-1004-32
+cleans up both the installation and the build output in the installation environment in
+.IR "/home/leo/uic-projects/netpoldo-1004-32" "."
+
+.TP
+.B uic_clean -v
+if the current directory is the home of an installation environment (the
+.IR "uictpl.conf " "file is there), both the installation in the " "chroot "
+.RI "subdirectory as the build output in the " "output " "subdirectory will be deleted."
+The command will produce verbose output.
+
+
+.SH FILES
+.TP 26n
+.I /etc/uic.conf
+.RB "uic configuration file. See " uic.conf (8)
+.TP
+.I <template>/uictpl.conf
+.RB "template definition and configuration file. See " uic.files (7)
+.TP
+.I <template>/hooks
+.RB "template hook scripts directory See " uic.hooks (7)
+.TP
+.I <template>/files
+.RB "directory of files to add to the installation. See " uic.files (7)
+.TP
+.I <template>/files.remove
+.RB "list of files to remove from the installation. See " uic.files (7)
+.TP
+.I <template>/build
+.RB "directory of additional files used during the build steps. See " uic.files (7)
+
+.SH AUTHOR
+.B uic
+.R was written by Leo Moll <leo.moll@yeasoft.com>
+
+.SH "SEE ALSO"
+.BR uic_build (7),
+.BR uic_clean (7),
+.BR uic_create (7),
+.BR uic_enter (7),
+.BR uic_pack (7),
+.BR uic_prepare (7),
+.BR uic_upgrade (7),
+.BR uic.files (7),
+.BR uic.hooks (7),
+.BR uic.conf (7)

@@ -1,0 +1,17 @@
+Source: uic
+Section: unknown
+Priority: extra
+Maintainer: Leo Moll <leo.moll@yeasoft.com>
+Build-Depends: debhelper (>= 7.0.50)
+Standards-Version: 3.9.2
+Homepage: http://www.yeasoft.com
+Vcs-Git: git://git.yeasoft.net/allgit/repos/uic.git
+
+Package: uic
+Architecture: all
+Depends: debootstrap ${misc:Depends}
+Description: The Ubuntu Installation Creator
+ uic permits to automate the creation of customized command line Linux
+ installations based on Debian-Style distributions. It is mainly intended
+ as a toolkit for system administrators who have often to install Linux
+ servers with particular, repeating characteristics.

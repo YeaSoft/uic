@@ -2,20 +2,83 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120326
+# VERSION 20120331
 # function collection for the netpoldo development system
 
 #####################
 # Internal Variables
-VERSION=0.3
+# generic script helpers
+SCRIPTNAME=$(basename $0)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+VERBOSE=0
+# uic specific
+VERSION='@VERSION@'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
 OLDHOSTNAME=$(hostname)
 TARGET=
 
+########################
+# Overall default values
+
+# The default working directory for installations
+# Default: UIC_WORKDIR=/usr/src
+UIC_WORKDIR=/usr/src
+
+# The default APT proxy to use
+# Default: none
+UIC_APTPROXY=
+
 #####################
 # Functions
+
+# generic script helpers
+
+function show_name {
+	echo "$SCRIPTNAME, version $VERSION"
+}
+
+function show_verbose {
+	if [ $VERBOSE -ge $1 ]; then
+		echo "$SCRIPTNAME: ${*:2}"
+	fi
+}
+
+function show_warning {
+	echo "$SCRIPTNAME warning: $*" >&2
+}
+
+function show_error {
+	echo "$SCRIPTNAME error: $*" >&2
+}
+
+function test_exec {
+	case $? in
+	0);;
+	*)	case "$1" in
+		"")	show_error "last command failed with error (code $?)";;
+		*)	show_error "$1 failed with error (code $?)";;
+		esac
+		if [ -n "$2" ]; then
+			show_error "commandline: ${*:2}"
+		fi
+		exit $?;;
+	esac
+}
+
+function test_getopt {
+	case $? in
+	0);;
+	1) show_error "syntax or usage error (code $?)"; exit $?;;
+	2) show_error "syntax or usage error (code $?) in [getopt]"; exit $?;;
+	3) show_error "internal error (code $?) in [getopt]"; exit $?;;
+	4) show_error "wrong getopt version installed"; exit $?;;
+	*) show_error "unknown getopt error (code $?)"; exit $?;;
+	esac
+}
+
+# uic specific
 
 function init_script() {
 	trap cleanup_script INT QUIT TERM EXIT
@@ -34,6 +97,7 @@ function chroot_init() {
 	if [ $SPECIALFSMOUNT -lt 1 ]; then
 		show_verbose 1 "Mounting special file systems in environment..."
 		mount_special
+		enable_policy
 		SPECIALFSMOUNT=1
 	fi
 }
@@ -44,6 +108,15 @@ function mount_special() {
 			mount -o bind ${MOUNT_POINT} ${TARGET}/chroot${MOUNT_POINT}
 		fi
 	done
+}
+
+function enable_policy() {
+	echo -e "#!/bin/sh\nexit 101" > "${TARGET}/chroot/usr/sbin/policy-rc.d"
+	chmod +x "${TARGET}/chroot/usr/sbin/policy-rc.d"
+}
+
+function disable_policy() {
+	[ -f "${TARGET}/chroot/usr/sbin/policy-rc.d" ] && rm "${TARGET}/chroot/usr/sbin/policy-rc.d"
 }
 
 function umount_special() {
@@ -57,6 +130,7 @@ function umount_special() {
 function chroot_exit() {
 	if [ $SPECIALFSMOUNT -gt 0 ]; then
 		show_verbose 1 "Unmounting special file systems in environment..."
+		disable_policy
 		umount_special 2> /dev/null
 		SPECIALFSMOUNT=0
 	fi
@@ -120,7 +194,7 @@ function cleanup_mounts() {
 		export debian_chroot="${TARGET} Environment"
 		chroot "${TARGET}/chroot" /bin/bash
 
-		if grep "${TARGET}/chroot" /proc/mounts; then
+		if grep "${TARGET}/chroot" /proc/mounts > /dev/null; then
 			# trying again to dismount
 			umount_special 2> /dev/null
 			for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
@@ -162,7 +236,7 @@ function test_environment() {
 		exit 1
 	fi
 
-	if [ ! -f "$1/uic.conf" ]; then
+	if [ ! -f "$1/uictpl.conf" ]; then
 		show_error "Environment $1 does not contain a configuration file"
 		exit 1
 	fi
@@ -179,13 +253,56 @@ function test_environment() {
 }
 
 function test_environment_empty() {
+	if [ ! -d "${TARGET}/chroot" ]; then
+		show_error "Installation environment is empty. Use 'uic create' to create a new one."
+		exit 1
+	fi
 	if [ $(find "${TARGET}/chroot" | wc -l) -lt 2 ]; then
-		show_error "Environment is empty. Use 'uic create' to create a new one."
+		show_error "Installation environment is empty. Use 'uic create' to create a new one."
 		exit 1
 	fi
 }
 
-function test_builder_comaptibility() {
+function test_environment_configuration() {
+	if [ -z "${UIC_SRCNAME}" ]; then
+		show_error "UIC_SRCNAME missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_SRCVERSION}" ]; then
+		show_error "UIC_SRCVERSION missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_ARCH}" ]; then
+		show_error "UIC_ARCH missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_RELEASE}" ]; then
+		show_error "UIC_RELEASE missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_REPOSITORY}" ]; then
+		show_error "UIC_REPOSITORY missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_KERNEL}" ]; then
+		show_error "UIC_KERNEL missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_SOFTWARE}" ]; then
+		show_error "UIC_SOFTWARE missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_RECONFIGURE}" ]; then
+		show_error "UIC_RECONFIGURE missing in environment configuration file"
+		exit 1
+	fi
+	if [ -z "${UIC_ROOTPASSWORD}" ]; then
+		show_error "UIC_ROOTPASSWORD missing in environment configuration file"
+		exit 1
+	fi
+}
+
+function test_builder_compatibility() {
 	MY_ARCH=$(dpkg-query -W -f='${Architecture}\n' dpkg)
 	if [ "${MY_ARCH}" = "${UIC_ARCH}" ]; then
 		show_verbose 2 "Target has the same architecture (${MY_ARCH})"
@@ -265,14 +382,14 @@ function verify_environment() {
 	else
 		TESTPATH=${1}
 	fi
-	if [ ! -f "${TESTPATH}/uic.md5" ]; then
+	if [ ! -f "${TESTPATH}/uictpl.md5" ]; then
 		show_verbose 1 "No integrity checksums found."
 		return 0;
 	fi
 	show_verbose 2 "Testing integrity checksums"
 	MD5TEMP=$(mktemp)
 	SEDFORMULA="s/ \*/ \*"$(echo -n "$TESTPATH" | sed -e 's/\//\\\//g')"\//g" 
-	sed -e "$SEDFORMULA" < "${TESTPATH}/uic.md5" > "$MD5TEMP"
+	sed -e "$SEDFORMULA" < "${TESTPATH}/uictpl.md5" > "$MD5TEMP"
 	md5sum --quiet -c "$MD5TEMP"
 	if [ $? -ne 0 ]; then
 		show_warning "Environment integrity error."
@@ -331,8 +448,34 @@ function apply_customizations() {
 	if [ -f "${TARGET}/$CUST_SUBDIR.remove" ]; then
 		xargs -r -a "${TARGET}/$CUST_SUBDIR.remove" rm -rf
 	fi
+	create_minimal_files
 	call_chroot_hook chroot_post_customization
 	call_hook post_customization
+}
+
+function create_minimal_files() {
+	# locale
+	if [ ! -f "$TARGET/chroot/var/lib/locales/supported.d/local" ]; then
+		echo -e "en_US.UTF-8 UTF-8" > "$TARGET/chroot/var/lib/locales/supported.d/local"
+	fi
+	# hostname
+	if [ ! -f "$TARGET/chroot/etc/hostname" ]; then
+		echo $UIC_SRCNAME > "$TARGET/chroot/etc/hostname"
+	fi
+	# dns resolution
+	if [ ! -f "$TARGET/chroot/etc/resolv.conf" ]; then
+		echo -e "nameserver 208.67.222.222\nnameserver 208.67.220.220" > "$TARGET/chroot/etc/resolv.conf"
+	fi
+	# file system table
+	if [ ! -f "$TARGET/chroot/etc/fstab" ]; then
+		echo -e "# /etc/fstab: static file system information." > "$TARGET/chroot/etc/fstab"
+		echo -e "#" >> "$TARGET/chroot/etc/fstab"
+		echo -e "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>" >> "$TARGET/chroot/etc/fstab"
+		echo -e "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
+		echo -e "" >> "$TARGET/chroot/etc/fstab"
+		echo -e "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
+		echo -e "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
+	fi
 }
 
 function get_filtered_repository() {
