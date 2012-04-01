@@ -30,6 +30,9 @@ UIC_WORKDIR=/usr/src
 # Default: none
 UIC_APTPROXY=
 
+# The default UIC template repositories
+UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
+
 #####################
 # Functions
 

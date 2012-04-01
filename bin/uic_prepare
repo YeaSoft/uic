@@ -19,41 +19,81 @@ source uic_utils
 
 # initialize runtime variables
 FORCE=0
+LISTVERSIONS=0
 ENVNAME=
 SRCARCHIVE=
 DESTPATH=
+TMPDESTINATION=
+TMPARCHIVE=
+
 
 #####################################
 # function section
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvF] [-n <name>] <source archive> [<destination path>]
+usage: $SCRIPTNAME [-hvF] [-n <name>] <template archive> [<destination path>]
 
 Options:
- -n, --name                   use an alternative name for the installation environment
- -F, --force                  force deletion of existing installation environment
- -v, --verbose                increase verbosity
-(-h) --help                   show this help (-h works with no other options)
+ -l, --list           list the available versions of the requested template
+ -n, --name           use an alternative name for the installation environment
+ -F, --force          force deletion of existing installation environment
+ -v, --verbose        increase verbosity
+(-h) --help           show this help (-h works with no other options)
 
 This script prepares the environment for an Ubuntu installation
 
 <source archive> can be:
- - a path to an UIC environment archive (usually a .tar.bz2)
- - a URL to an UIC environment archive (usually a .tar.bz2) (NOT IMPLEMENTED)
- - thge base name of an installation environment (e.g.: netpoldo-1004-32)  (NOT IMPLEMENTED)
+ - the base name of an installation environment (e.g.: netpoldo-1004-32)
+ - a local path to an UIC template archive
+ - a URL to an UIC template archive (NOT IMPLEMENTED)
 
-If <destination path> is omitted, the installation environment will be created in the default
-work directory (usually /usr/src)
+If <destination path> is omitted, the installation environment will be created in
+the default work directory (usually /usr/src)
 
 EOF
+}
+
+# $1 : path to the manifest file
+# $2 : repository url
+# $3 : template name
+function list_versions {
+	if [ -f "$1" ]; then
+		if [ $(stat -t "$1" | cut -d\  -f 2) -gt 0 ]; then
+			echo The following versions of $3 are available on $2:
+			echo
+			awk '{print $2}' < "$1"
+			return 0
+		fi
+	fi
+	echo There are no versions of $3 available on $2.
+	return 0;
+}
+
+# $1 : template url
+# $2 : destination filename
+function download_archive {
+	show_verbose 1 "Downloading $(basename $1) from $(dirname $1)..."
+	DA_TEMPDIR=$(mktemp -d)
+	DA_ERR=0
+	if  wget -q -P "${DA_TEMPDIR}" $1; then
+		if [ -f "${DA_TEMPDIR}/$(basename $1)" ]; then
+			mv "${DA_TEMPDIR}/$(basename $1)" "$2"
+		else
+			DA_ERR=2
+		fi
+	else
+		DA_ERR=$?
+	fi
+	rm -rf "${DA_TEMPDIR}"
+	return ${DA_ERR}
 }
 
 #####################################
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F,n: --longoptions help,verbose,force,name: -- "$@")
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F,n:,l --longoptions help,verbose,force,name:,list -- "$@")
 test_getopt
 eval set -- "$PARSER"
 while true; do
@@ -62,6 +102,7 @@ while true; do
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-F|--force)                     FORCE=1; shift;;
 	-n|--name)			ENVNAME="$2"; shift 2;;
+	-l|--list)			LISTVERSIONS=1; shift;;
 	--)				shift; break;;
         *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
@@ -98,24 +139,71 @@ if [ ! -d "${DESTPATH}" ]; then
 	exit 2;
 fi
 
-if [ "${SRCARCHIVE:0:7}" = "http://" ]; then
-	show_error "http download still not supported."
-	exit 3;
-elif [ "${SRCARCHIVE:0:6}" = "ftp://" ]; then
-	show_error "ftp download still not supported."
-	exit 3;
+if [ "${SRCARCHIVE:0:7}" = "http://" -o "${SRCARCHIVE:0:8}" = "https://" -o "${SRCARCHIVE:0:6}" = "ftp://" ]; then
+	show_verbose 2 "Trying to download ${SRCARCHIVE}..."
+	TMPARCHIVE="$(mktemp)"
+	if ! download_archive "${SRCARCHIVE}" "${TMPARCHIVE}"; then
+		show_error "Template archive ${SRCARCHIVE} not found."
+		rm -f "${TMPARCHIVE}"
+		exit 2;
+	fi
+	show_verbose 2 "Template archive $(basename ${SRCARCHIVE}) successfully downloaded. Trying to unpack..."
+	SRCARCHIVE="${TMPARCHIVE}"
 elif [ -f "${SRCARCHIVE}" ]; then
 	show_verbose 2 "Source archive ${SRCARCHIVE} is physically reachable. Trying to unpack..."
+elif [ $(expr match "$1" '.*\/.*') -ne 0 ]; then
+	show_error "Template archive ${SRCARCHIVE} not found."
+	exit 2;
+else
+	MANIFEST="$(mktemp)"
+	TEMPLATE="${SRCARCHIVE}"
+	show_verbose 2 "Trying to get ${TEMPLATE} from the repositories..."
+	for REPOSITORY in ${UIC_REPOSITORIES}; do
+		ARCHFILE=
+		if download_archive ${REPOSITORY}/${TEMPLATE}.manifest "${MANIFEST}"; then
+			show_verbose 1 "Found ${TEMPLATE} in ${REPOSITORY}"
+			if [ ${LISTVERSIONS} -gt 0 ]; then
+				list_versions "${MANIFEST}" ${REPOSITORY} ${TEMPLATE}
+				rm -f "${MANIFEST}"
+				exit 0
+			fi
+			ARCHFILE=$(awk '{print $2}' < "${MANIFEST}" | sort -r | head -n1)
+			if [ "${ARCHFILE:0:1}" = "*" ]; then
+				ARCHFILE="${ARCHFILE:1}"
+			fi
+			SRCARCHIVE="$(mktemp)"
+			if download_archive ${REPOSITORY}/${ARCHFILE} "${SRCARCHIVE}"; then
+				TMPARCHIVE="${SRCARCHIVE}"
+				break;
+			else
+				show_error "Cannot download ${ARCHFILE} from ${REPOSITORY}"
+				rm -f "${MANIFEST}"
+				rm -f "${SRCARCHIVE}"
+				exit 2
+			fi
+		fi
+	done
+	rm "${MANIFEST}"
+	if [ -z "${TMPARCHIVE}" ]; then
+		show_error "${TEMPLATE} not found in any repository"
+		exit 2
+	fi
 fi
 
 TMPDESTINATION="$(mktemp -d)"
 tar -xjpf "${SRCARCHIVE}" --directory "${TMPDESTINATION}"
-test_exec tar tar -xjpf "${SRCARCHIVE}" --directory "${TMPDESTINATION}"
+if [ $? -ne 0 ]; then
+	show_error "Cannot unpack template archive to ${TMPDESTINATION}"
+	[ -n "${TMPDESTINATION}" -a -d "${TMPDESTINATION}" ] && rm -rf "${TMPDESTINATION}"
+	[ -n "${TMPARCHIVE}"     -a -f "${TMPARCHIVE}" ]     && rm "${TMPARCHIVE}"
+	exit $?
+fi
 
-UICLIST=( $(find "${TMPDESTINATION}" -name uic.conf) )
+UICLIST=( $(find "${TMPDESTINATION}" -name uictpl.conf) )
 if [ ${#UICLIST[@]} -eq 0 ]; then
-	rm -rf "${TMPDESTINATION}"
-	show_error "Source archive ${SRCARCHIVE} does not contain a valid installation environment"
+	show_error "Template archive does not contain a valid installation environment"
+	[ -n "${TMPDESTINATION}" -a -d "${TMPDESTINATION}" ] && rm -rf "${TMPDESTINATION}"
+	[ -n "${TMPARCHIVE}"     -a -f "${TMPARCHIVE}" ]     && rm "${TMPARCHIVE}"
 	exit 3
 fi
 
@@ -136,9 +224,14 @@ if [ -d "${DESTPATH}/${ENVNAME}" ]; then
 		rm -rf "${DESTPATH}/${ENVNAME}"
 	else
 		show_error "Destination environment exists in ${DESTPATH}/${ENVNAME}. Use -F to force cleanup."
+		[ -n "${TMPDESTINATION}" -a -d "${TMPDESTINATION}" ] && rm -rf "${TMPDESTINATION}"
+		[ -n "${TMPARCHIVE}"     -a -f "${TMPARCHIVE}" ]     && rm "${TMPARCHIVE}"
 		exit 1
 	fi
 fi
 
 mv "${TMPDESTINATION}/${UICPATH}" "${DESTPATH}/${ENVNAME}"
-rm -rf "${TMPDESTINATION}"
+[ -n "${TMPDESTINATION}" -a -d "${TMPDESTINATION}" ] && rm -rf "${TMPDESTINATION}"
+[ -n "${TMPARCHIVE}"     -a -f "${TMPARCHIVE}" ]     && rm "${TMPARCHIVE}"
+
+show_verbose 1 "Destination environment ${ENVNAME} successfully created."
