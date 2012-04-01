@@ -46,7 +46,7 @@ This script prepares the environment for an Ubuntu installation
 <source archive> can be:
  - the base name of an installation environment (e.g.: netpoldo-1004-32)
  - a local path to an UIC template archive
- - a URL to an UIC template archive (NOT IMPLEMENTED)
+ - a URL to an UIC template archive
 
 If <destination path> is omitted, the installation environment will be created in
 the default work directory (usually /usr/src)
