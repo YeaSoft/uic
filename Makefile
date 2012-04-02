@@ -23,3 +23,15 @@ install:
 	touch -r bin/uic_utils				$(DESTDIR)/usr/bin/uic_utils
 	chown root:root 				$(DESTDIR)/usr/bin/uic_utils
 	chmod 644					$(DESTDIR)/usr/bin/uic_utils
+
+uninstall:
+	rm -f $(DESTDIR)/etc/uic.conf
+	rm -f $(DESTDIR)/usr/bin/uic_utils
+	rm -f $(DESTDIR)/usr/bin/uic_pack
+	rm -f $(DESTDIR)/usr/bin/uic_build
+	rm -f $(DESTDIR)/usr/bin/uic_enter
+	rm -f $(DESTDIR)/usr/bin/uic_upgrade
+	rm -f $(DESTDIR)/usr/bin/uic_create
+#	rm -f $(DESTDIR)/usr/bin/uic_update
+	rm -f $(DESTDIR)/usr/bin/uic_prepare
+	rm -f $(DESTDIR)/usr/bin/uic
