@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120331
+# Version 20120417
 # This script upgrades an Ubuntu installation environment
 
 #####################################
@@ -105,6 +105,8 @@ fi
 call_hook pre_installation
 call_chroot_hook chroot_pre_installation
 
+init_apt_proxy
+
 show_verbose 1 "Updating package sources..."
 chroot "$TARGET/chroot" apt-get update
 test_exec chroot apt-get update
@@ -124,6 +126,8 @@ if [ $DO_REINSTALLATIONS -gt 0 ]; then
 		test_exec chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
 	fi
 fi
+
+exit_apt_proxy
 
 call_chroot_hook chroot_post_installation
 call_hook post_installation

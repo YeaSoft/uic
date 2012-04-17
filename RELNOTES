@@ -1,0 +1,40 @@
+==============================================================================
+Release Notes - uic - Ubuntu Installation Creator - Version 0.07    2012-04-17
+==============================================================================
+
+* Release Scope
+* What's New
+* Known Problems
+* Release History
+
+
+Release Scope
+-------------
+This is the first maintenance release of uic. It fixes some problems
+encountered with the previous version.
+
+
+What's new
+----------
+  * Added missing command uic_clean
+  * Added missing APT proxy support to uic_upgrade
+  * Added missing options to /etc/uic.conf
+
+
+Known Problems
+--------------
+
+ * The command uic_update is still not implemented
+ * During the execution of uic_create and uic_upgrade it still happens that
+   some process is started in the chroot preventing the special filesystems to
+   be unmounted. This happens currently with NetPoldo 10.04 and is fixed by
+   a workaround stopping all possibly afected services in the hook script
+   'chroot_post_installation'
+
+
+Release History
+---------------
+
+Version 0.05 released on 2012-03-26
+
+ * First public release containing

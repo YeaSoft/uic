@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120331
+# VERSION 20120417
 # function collection for the netpoldo development system
 
 #####################
@@ -30,7 +30,9 @@ UIC_WORKDIR=/usr/src
 # Default: none
 UIC_APTPROXY=
 
-# The default UIC template repositories
+# The default UIC template repositories (separated
+# by spaces)
+# Default: http://www.yeasoft.com/uic-templates
 UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
 
 #####################
