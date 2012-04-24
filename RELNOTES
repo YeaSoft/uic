@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.07    2012-04-17
+Release Notes - uic - Ubuntu Installation Creator - Version 0.08    2012-04-24
 ==============================================================================
 
 * Release Scope
@@ -10,16 +10,21 @@ Release Notes - uic - Ubuntu Installation Creator - Version 0.07    2012-04-17
 
 Release Scope
 -------------
-This is the first maintenance release of uic. It fixes some problems
-encountered with the previous version.
+This release fixes an error that is potentially very dangerous because it
+may compromise the host system, but at now not really harmful, since the
+affected feature was not used in any avaiable uic template.
+Additionally it adds two new commands that are very useful when using
+uic for installing new machines. This will in particular support the first
+templates for Alix Boards.
 
 
 What's new
 ----------
-  * Added missing command uic_clean
-  * Added missing APT proxy support to uic_upgrade
-  * Added missing options to /etc/uic.conf
-
+  * Critical: Fixed a serious bug (missing chroot) in processing
+    file remove lists during the customization phase. This bug could 
+    in certain cases compromise the host system.
+  * Added new commands uic_attach and uic_detach
+  * Updated version numbers and release numbers in man pages
 
 Known Problems
 --------------
@@ -34,6 +39,11 @@ Known Problems
 
 Release History
 ---------------
+Version 0.07 released on 2012-04-17
+
+  * Added missing command uic_clean
+  * Added missing APT proxy support to uic_upgrade
+  * Added missing options to /etc/uic.conf
 
 Version 0.05 released on 2012-03-26
 

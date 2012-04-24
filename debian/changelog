@@ -1,9 +1,10 @@
 uic (0.08) lucid; urgency=low
 
   * Critical: Fixed a serious bug (missing chroot) in processing
-    file remove list during customization. This bug could in certain
-    cases compromize the host system.
+    file remove lists during the customization phase. This bug could
+    in certain cases compromise the host system.
   * Added new commands uic_attach and uic_detach
+  * Updated version numbers and release numbers in man pages
 
  -- Leo Moll <leo.moll@yeasoft.com>  Tue, 24 Apr 2012 18:31:45 +0200
 
