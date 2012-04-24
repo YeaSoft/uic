@@ -1,7 +1,9 @@
 doc/uic.7
+doc/uic_attach.7
 doc/uic_build.7
 doc/uic_clean.7
 doc/uic_create.7
+doc/uic_detach.7
 doc/uic_enter.7
 doc/uic_pack.7
 doc/uic_prepare.7
