@@ -1,0 +1,94 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120424
+# This script detaches a partition or directory from an Ubuntu
+# installation environment
+
+#####################################
+# script initialization
+
+# load function library
+source uic_utils
+
+# load user customized configuration data
+[ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
+#####################################
+# variables section
+
+# initialize runtime variables
+FORCE=0
+UMOUNT_PARAMS=
+
+#####################################
+# function section
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hv] [-p <umount params>] [<environment name>]
+
+Options:
+ -p, --umount-params          full set of parameters to pass to the umount
+                              command
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script detaches a partition or directory from the Ubuntu installation
+environment (if previously attached).
+
+<environment name> can be omitted if the command is launched from within the
+environment directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory
+  (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current
+  directory
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,p: --longoptions help,verbose,umount-params: -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-p|--mount-params)		UMOUNT_PARAMS="$2"; shift 2;;
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	show_name;;
+*)	show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+find_environment $1
+verify_environment $1
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+# check if the environment has already been attached
+if grep "$TARGET/chroot " /proc/mounts > /dev/null; then
+	show_verbose 1 "Detaching the installation environment..."
+	umount $UMOUNT_PARAMS "$TARGET/chroot"
+	test_exec umount umount $UMOUNT_PARAMS "$TARGET/chroot"
+else
+	show_verbose 0 "No partition attached to the installation environment"
+fi

@@ -30,6 +30,9 @@ Commands:
         clean             cleans up the installation
         build             produces the deliverables of the installation
 
+        attach            attaches a partition to the installation
+        detach            detaches a partition from the installation
+
         pack              packages an installation environment for
                           distribution
 

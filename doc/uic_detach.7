@@ -1,28 +1,22 @@
-.TH uic_enter 7 "24 April 2012" "Version 0.8" "Ubuntu Installation Creator"
+.TH uic_detach 7 "24 April 2012" "Version 0.8" "Ubuntu Installation Creator"
 .SH NAME
-uic_enter - chroots into the installation in the specified installation environment
+uic_detach - detaches a partition or directory from the specified installation environment
 
 .SH SYNOPSIS
 .SP
-.B uic_enter [-hv] [
+.B uic_detach [-hv] [
+.I -p <umount params>
+.B ] [
 .I <environment_path>
 .B ]
 
 .SH DESCRIPTION
-.B uic_enter
-.R chroots into the installation in the specified installation environment so that the user
-can make changes directly into the installation (like installing additional software). The shell
-prompt will be slightly modified in order to remember the user that he is working in a
-chroot-shell.
-.PP
-.RI "The special filesystems " "/sys" ", " "/proc" ", " "/dev" ", " "/dev/pts" " and " "/dev/shm "
-are mounted in the installation in order to offer full functionality to the user. The undesired
-automatic start of services performed by software installation is inhibited by a temporary policy
-.RI "(" "/usr/sbin/policy-rc.d" " fails with return code 101)."
-.PP
-.RB "To exit the chroot-shell, use the command " "exit " "or hit " "Ctrl+D" "."
+.B uic_detach
+.R detaches a partition or directory previously attached from the specified Ubuntu installation
+environment so that all subsequent creation and customization operations will occur in the 
+same filesystem the installation environment is located.
 
-.IR "<environment_path> " "can be omitted if the command is launched from within the environment
+.IR "<environment_path> " "can be omitted if the command is launched from within the environment"
 directory. Otherwise it can be:
 .IP -
 an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
@@ -40,6 +34,21 @@ shows the help for the command.
 .B -v, --verbose
 increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
 
+.TP
+.B -p, --umount-params
+.RB "full set of parameters to pass to the " "umount " "command. The set must be quoted in order to be recognized.
+
+.SH EXAMPLES
+
+.TP 
+.B uic_detach -v
+.RI "detaches the previously attached filesystem from the Ubuntu intallation environemnt in the current directory"
+.RB "and shows verbose output."
+
+.TP 
+.B uic_detach -vv -p """-f""" /root/netpoldo/netpoldo-1004-32
+.RI "detaches the previously attached filesystem from the Ubuntu intallation environemnt in " "/root/netpoldo/netpoldo-1004-32"
+.RB "by passing the parameter " "-f " "to the umount command and shows very verbose output."
 
 .SH FILES
 .TP 26n
@@ -66,6 +75,7 @@ increases the verbosity level of the command. If specified more than once, the v
 .R was written by Leo Moll <leo.moll@yeasoft.com>
 
 .SH "SEE ALSO"
+.BR umount (8),
 .BR uic_attach (7).
 .BR uic_build (7),
 .BR uic_clean (7),
@@ -78,4 +88,3 @@ increases the verbosity level of the command. If specified more than once, the v
 .BR uic.files (7),
 .BR uic.hooks (7),
 .BR uic.conf (7)
-

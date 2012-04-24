@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120417
+# VERSION 20120424
 # function collection for the netpoldo development system
 
 #####################
@@ -142,7 +142,7 @@ function chroot_exit() {
 }
 
 function test_mountinuse() {
-	if grep "${TARGET}/chroot" /proc/mounts; then
+	if grep "${TARGET}/chroot/" /proc/mounts; then
 		show_error "WARNING: There are active mounts in the installation environment probably"
 		show_error "         because of an active preparation session. The execution will be"
 		show_error "         terminated in order to prevent damage to the instllation environment"
@@ -151,9 +151,9 @@ function test_mountinuse() {
 }
 
 function cleanup_mounts() {
-	if grep "${TARGET}/chroot" /proc/mounts; then
+	if grep "${TARGET}/chroot/" /proc/mounts; then
 		# let's try to unmount them
-		for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+		for MOUNT_POINT in $(grep "${TARGET}/chroot/" /proc/mounts | awk '{print $2}'); do
 			umount ${MOUNT_POINT} 2> /dev/null
 		done
 	fi
@@ -162,7 +162,7 @@ function cleanup_mounts() {
 	else
 		SHELL_REPEAT=$(($1))
 	fi
-	while grep "${TARGET}/chroot" /proc/mounts > /dev/null; do
+	while grep "${TARGET}/chroot/" /proc/mounts > /dev/null; do
 		echo >&2
 		show_error "WARNING: There are some active mounts in the installation environment that"
 		show_error "         cannot be unmounted automatically because probably they are still"
@@ -172,20 +172,20 @@ function cleanup_mounts() {
 		echo >&2
 		echo "Active filesystem mounts" >&2
 		echo "--------------------------------" >&2
-		grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}' >&2
+		grep "${TARGET}/chroot/" /proc/mounts | awk '{print $2}' >&2
 		echo >&2
 		echo "Active processes having open handles on the mountpoints" >&2
 		echo "-------------------------------------------------------" >&2
-		for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+		for MOUNT_POINT in $(grep "${TARGET}/chroot/" /proc/mounts | awk '{print $2}'); do
 			lsof | grep ${MOUNT_POINT} >&2
 		done
-		
+
 		if [ ${SHELL_REPEAT} -lt 1 ]; then
 			echo >&2
 			echo "Please try to unmount them manually before continuing or reboot." >&2
 			exit 1
 		fi
-		
+
 		echo "A chroot shell into the target environment will be launched for you" >&2
 		(( SHELL_REPEAT-- ))
 		if [ ${SHELL_REPEAT} -lt 1 ]; then
@@ -195,14 +195,14 @@ function cleanup_mounts() {
 			echo "will be attempted again." >&2
 		fi
 		echo "ENTERING CHROOT SHELL...." >&2
-		mount_special		
+		mount_special
 		export debian_chroot="${TARGET} Environment"
 		chroot "${TARGET}/chroot" /bin/bash
 
-		if grep "${TARGET}/chroot" /proc/mounts > /dev/null; then
+		if grep "${TARGET}/chroot/" /proc/mounts > /dev/null; then
 			# trying again to dismount
 			umount_special 2> /dev/null
-			for MOUNT_POINT in $(grep "${TARGET}/chroot" /proc/mounts | awk '{print $2}'); do
+			for MOUNT_POINT in $(grep "${TARGET}/chroot/" /proc/mounts | awk '{print $2}'); do
 				umount ${MOUNT_POINT} 2> /dev/null
 			done
 		fi
@@ -233,6 +233,11 @@ function find_environment() {
 	fi
 	TARGETNAME=$(basename ${TARGET})
 	TARGETPATH=$(dirname ${TARGET})
+	if [ "${TARGETPATH}" = "/" ]; then
+		TARGET="/${TARGETNAME}"
+	else
+		TARGET="${TARGETPATH}/${TARGETNAME}"
+	fi
 }
 
 function test_environment() {
@@ -451,7 +456,8 @@ function apply_customizations() {
 	call_chroot_hook chroot_pre_customization
 	cp -a "$TARGET/$CUST_SUBDIR/." "$TARGET/chroot/"
 	if [ -f "${TARGET}/$CUST_SUBDIR.remove" ]; then
-		xargs -r -a "${TARGET}/$CUST_SUBDIR.remove" rm -rf
+		show_verbose 2 "Processing file deletion list $CUST_SUBDIR.remove"
+		xargs -r -a "${TARGET}/$CUST_SUBDIR.remove" chroot "$TARGET/chroot" rm -rf
 	fi
 	create_minimal_files
 	call_chroot_hook chroot_post_customization
