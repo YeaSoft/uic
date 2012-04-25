@@ -1,5 +1,5 @@
 Source: uic
-Section: unknown
+Section: admin
 Priority: extra
 Maintainer: Leo Moll <leo.moll@yeasoft.com>
 Build-Depends: debhelper (>= 7.0.50)
