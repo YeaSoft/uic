@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.08    2012-04-24
+Release Notes - uic - Ubuntu Installation Creator - Version 0.09    2012-04-28
 ==============================================================================
 
 * Release Scope
@@ -10,21 +10,24 @@ Release Notes - uic - Ubuntu Installation Creator - Version 0.08    2012-04-24
 
 Release Scope
 -------------
-This release fixes an error that is potentially very dangerous because it
-may compromise the host system, but at now not really harmful, since the
-affected feature was not used in any avaiable uic template.
-Additionally it adds two new commands that are very useful when using
-uic for installing new machines. This will in particular support the first
-templates for Alix Boards.
+This release is primarily inspired by the creation of templates for Alix
+boards. In order to provide a valid installation toolset a NetPoldo-like
+basic boot system for Alix is required. From this system it should be possible
+to install an Alix-System using uic. In order to achive that, two important
+features have been added: PPA support in order to include uic itself in a
+uic generated system and the possibility to attach a partition or directory
+to the uic creation environment.
 
 
 What's new
 ----------
-  * Critical: Fixed a serious bug (missing chroot) in processing
+  * Critical Fix: Fixed a serious bug (missing chroot) in processing
     file remove lists during the customization phase. This bug could 
     in certain cases compromise the host system.
+  * Added support for launchpad PPA through UIC_PPAS in uictpl.conf
   * Added new commands uic_attach and uic_detach
   * Updated version numbers and release numbers in man pages
+
 
 Known Problems
 --------------
@@ -39,6 +42,14 @@ Known Problems
 
 Release History
 ---------------
+Version 0.08 not released (only for internal use)
+
+  * Critical Fix: Fixed a serious bug (missing chroot) in processing
+    file remove lists during the customization phase. This bug could
+    in certain cases compromise the host system.
+  * Added new commands uic_attach and uic_detach
+  * Updated version numbers and release numbers in man pages
+
 Version 0.07 released on 2012-04-17
 
   * Added missing command uic_clean

@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120424
+# VERSION 20120427
 # function collection for the netpoldo development system
 
 #####################
@@ -511,4 +511,41 @@ function exit_apt_proxy() {
 	if [ -f "$TARGET/chroot/etc/apt/sources.list.BACKUP" ]; then
 		mv "$TARGET/chroot/etc/apt/sources.list.BACKUP" "$TARGET/chroot/etc/apt/sources.list"
 	fi
+}
+
+function add_ppa() {
+	PPA="$1"
+	if [ -z "$PPA" ]; then
+		show_verbose 1 "No PPA specified"
+		return 1
+	fi
+
+	# explode the ppa name into user part and area name
+	PPA_USER=$(expr match "$PPA" 'ppa:\(.*\)/.*')
+	PPA_AREA=$(expr match "$PPA" 'ppa:.*/\(.*\)')
+
+	if [ -z "$PPA_USER" -o -z "$PPA_AREA" ]; then
+		show_error "Specified PPA $PPA is not valid"
+		exit 3
+	fi
+
+	# query the signing key through the launchpad API
+	TEMPFILE=$(mktemp)
+	wget -q -O $TEMPFILE https://api.launchpad.net/1.0/~$PPA_USER/+archive/$PPA_AREA
+	PPA_INFO=$(sed -e "s/\"//g" < $TEMPFILE)
+	rm $TEMPFILE
+	PPA_FINGERPRINT=$(expr match "$PPA_INFO" '.*signing_key_fingerprint: \([0-9A-F]*\)')
+	if [ -z "$PPA_FINGERPRINT" ]; then
+		show_error "Cannot determine signing key for PPA $PPA"
+		exit 3
+	fi
+
+	# now add the signing key to the APT keyring
+	chroot "$TARGET/chroot" apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $PPA_FINGERPRINT
+	test_exec apt-key apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $PPA_FINGERPRINT
+
+	# now create the ppa entries
+	echo "# apt sources for ${PPA}" > "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
+	echo "deb http://ppa.launchpad.net/${PPA_USER}/${PPA_AREA}/ubuntu ${UIC_RELEASE} main" >> "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
+	echo "deb-src http://ppa.launchpad.net/${PPA_USER}/${PPA_AREA}/ubuntu ${UIC_RELEASE} main" >> "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
 }

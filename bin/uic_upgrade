@@ -107,6 +107,13 @@ call_chroot_hook chroot_pre_installation
 
 init_apt_proxy
 
+if [ -n "$UIC_PPAS" ]; then
+        for elem in "$UIC_PPAS"; do
+                show_verbose 1 "Adding PPA $elem"
+                add_ppa $elem
+        done
+fi
+
 show_verbose 1 "Updating package sources..."
 chroot "$TARGET/chroot" apt-get update
 test_exec chroot apt-get update
