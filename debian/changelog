@@ -1,3 +1,19 @@
+uic (0.10) lucid; urgency=low
+
+  * Feature: Added support for Debian squeeze
+  * Feature: Added support for installing bundled .deb packages
+  * Feature: New build step "report" creates an installation report
+  * Feature: New build step "archive" produces an archive of the root
+    filesystem
+  * Fix: binary package architecture set to "all"
+  * Fix: remove debris (/run/shm on /run/shm) in mount table after
+    operations requiring special fs mounts
+  * Fix: reconfigure steps are not mandatory any more (UIC_RECONFIGURE
+    can be left empty)
+  * Fix: locales are regenerated also on uic_upgrade
+
+ -- Leo Moll <leo.moll@yeasoft.com>  Wed, 9 May 2012 11:27:17 +0200
+
 uic (0.09) lucid; urgency=low
 
   * Added support for launchpad PPA through UIC_PPAS in uictpl.conf

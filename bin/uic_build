@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120331
+# Version 20120509
 # This script produces the deliverables of an Ubuntu installation environment
 
 #####################################
@@ -76,6 +76,8 @@ function build_target {
 	"initrd")	build_target_initrd $@;;
 	"squashfs")	build_target_squashfs $@;;
 	"install")	build_target_install $@;;
+	"report")	build_target_report $@;;
+	"archive")	build_target_archive $@;;
 	*)		if [ -x "$TARGET/build/build_target_$UIC_BUILDTYPE" ]; then
 				show_verbose 2 "Calling custom buildscript build_target_$UIC_BUILDTYPE..."
 				source "$TARGET/build/build_target_$UIC_BUILDTYPE"
@@ -93,7 +95,7 @@ function build_target_TEMPLATE {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}."
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name build_target_TEMPLATE --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "$PARSER"
 	while true; do
@@ -115,11 +117,102 @@ function build_target_TEMPLATE {
 	call_hook post_build_TEMPLATE
 }
 
+function build_target_archive {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}"
+	UIC_EXCLUDEFILE="${TARGET}/build/${UIC_BUILDNAME}.tar.exclude"
+	UIC_EXCLUDEOPT=
+	UIC_COMPOPT=
+	UIC_COMPEXT=".tar"
+	UIC_VSUFFIX=
+	# parse parameters
+	PARSER=$(getopt --name build_target_archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while [ $# -gt 0 ]; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		-e|--exclude)	UIC_EXCLUDEFILE="${TARGET}/build/${2}"
+				if [ ! -f "${UIC_EXCLUDEFILE}" ]; then
+					show_error "Exclude file $2 does not exist"
+					exit 2
+				fi
+				shift 2
+				;;
+		-j|--bzip2)	UIC_COMPOPT="-j"
+				UIC_COMPEXT=".tar.bz2"
+				shift
+				;;
+		-z|--gzip)	UIC_COMPOPT="-z"
+				UIC_COMPEXT=".tar.gz"
+				shift
+				;;
+		-v|--version)	UIC_VSUFFIX="-${UIC_SRCVERSION}"; shift;;
+		--)		shift; break;;
+		esac
+	done
+
+	call_hook pre_build_archive
+	call_chroot_hook chroot_pre_build_archive
+
+	cleanup_environment
+
+	show_verbose 1 "Create archive ${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT} in ${TARGET}/output..."
+	if [ -f "${UIC_EXCLUDEFILE}" ]; then
+		UIC_EXCLUDEOPT="--exclude-from=\"${UIC_EXCLUDEFILE}\""
+	fi
+	TEMP_MOUNT=$(mktemp -d)
+	mount -o bind "${TARGET}/chroot" "${TEMP_MOUNT}"
+	tar -cpf "${TARGET}/output/${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT}" ${UIC_COMPOPT} ${UIC_EXCLUDEOPT} -C "${TEMP_MOUNT}" .
+	umount "${TEMP_MOUNT}"
+	rmdir "${TEMP_MOUNT}"
+
+	call_chroot_hook chroot_post_build_archive
+	call_hook post_build_archive
+}
+
+function build_target_report {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}.package-list"
+	UIC_TERSE=0
+	# parse parameters
+	PARSER=$(getopt --name build_target_report --options o:,t --longoptions output:,terse -- "$@")
+	test_getopt
+	eval set -- "$PARSER"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		-t|--terse)	UIC_TERSE=1
+				shift
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# perform the build step
+	call_hook pre_build_report
+	call_chroot_hook chroot_pre_build_report
+
+	show_verbose 1 "Creating packages report ${UIC_OUTPUTFILE} in ${TARGET}/output..."
+	if [ $UIC_TERSE -gt 0 ]; then
+		chroot "${TARGET}/chroot" dpkg --get-selections | grep install > "${TARGET}/output/${UIC_OUTPUTFILE}"
+	else
+		chroot "${TARGET}/chroot" dpkg --list | grep ^ii > "${TARGET}/output/${UIC_OUTPUTFILE}"
+	fi
+
+	call_chroot_hook chroot_post_build_report
+	call_hook post_build_report
+}
+
 function build_target_install {
 	# initialize variables
 	UIC_OUTPUTPATH=
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name build_target_install --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "$PARSER"
 	while true; do
@@ -156,7 +249,7 @@ function build_target_kernel {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.vmlinuz"
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name build_target_kernel --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "$PARSER"
 	while true; do
@@ -190,7 +283,7 @@ function build_target_initrd {
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.initrd"
 	UIC_CONFIGFILE="${TARGET}/build/${UIC_BUILDNAME}.initramfs.conf"
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o:,c: --longoptions output:,config: -- "$@")
+	PARSER=$(getopt --name build_target_initrd --options o:,c: --longoptions output:,config: -- "$@")
 	test_getopt
 	eval set -- "$PARSER"
 	while true; do
@@ -217,7 +310,7 @@ function build_target_initrd {
 
 	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
 	[ -f "${UIC_CONFIGFILE}" ] && cp "${UIC_CONFIGFILE}" "${TARGET}/chroot/etc/initramfs-tools/initramfs.conf"
-	chroot "${TARGET}/chroot" /usr/sbin/update-initramfs -c -k all
+	chroot "${TARGET}/chroot" /usr/sbin/update-initramfs -u -k all
 	cp  "${TARGET}/chroot/initrd.img" "${TARGET}/output/${UIC_OUTPUTFILE}"
 
 	call_chroot_hook chroot_post_build_initrd

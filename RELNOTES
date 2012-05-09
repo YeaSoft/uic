@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.09    2012-04-28
+Release Notes - uic - Ubuntu Installation Creator - Version 0.10    2012-05-09
 ==============================================================================
 
 * Release Scope
@@ -10,23 +10,27 @@ Release Notes - uic - Ubuntu Installation Creator - Version 0.09    2012-04-28
 
 Release Scope
 -------------
-This release is primarily inspired by the creation of templates for Alix
-boards. In order to provide a valid installation toolset a NetPoldo-like
-basic boot system for Alix is required. From this system it should be possible
-to install an Alix-System using uic. In order to achive that, two important
-features have been added: PPA support in order to include uic itself in a
-uic generated system and the possibility to attach a partition or directory
-to the uic creation environment.
+This release continues the implementation of features inspired by the creation
+of templates for Alix boards started in the previous release. Since under
+certian aspects Debian may be more suitable for operating small appliances, it
+is now time to test and adapt uic also to Debian based installations.
+In addition to supporting Debian for the first time, this release offers also
+some additional features needed as side effect of the debian compatibility.
 
 
 What's new
 ----------
-  * Critical Fix: Fixed a serious bug (missing chroot) in processing
-    file remove lists during the customization phase. This bug could 
-    in certain cases compromise the host system.
-  * Added support for launchpad PPA through UIC_PPAS in uictpl.conf
-  * Added new commands uic_attach and uic_detach
-  * Updated version numbers and release numbers in man pages
+  * Feature: Added support for Debian squeeze
+  * Feature: Added support for installing bundled .deb packages
+  * Feature: New build step "report" creates an installation report
+  * Feature: New build step "archive" produces an archive of the root
+    filesystem
+  * Fix: binary package architecture set to "all"
+  * Fix: remove debris (/run/shm on /run/shm) in mount table after
+    operations requiring special fs mounts
+  * Fix: reconfigure steps are not mandatory any more (UIC_RECONFIGURE
+    can be left empty)
+  * Fix: locales are regenerated also on uic_upgrade
 
 
 Known Problems
@@ -42,6 +46,10 @@ Known Problems
 
 Release History
 ---------------
+Version 0.09 released on 2012-04-29
+
+  * Added support for launchpad PPA through UIC_PPAS in uictpl.conf
+
 Version 0.08 not released (only for internal use)
 
   * Critical Fix: Fixed a serious bug (missing chroot) in processing
@@ -58,4 +66,4 @@ Version 0.07 released on 2012-04-17
 
 Version 0.05 released on 2012-03-26
 
- * First public release containing
+ * First public release
