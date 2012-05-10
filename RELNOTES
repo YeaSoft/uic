@@ -57,6 +57,13 @@ Known Problems
 
 Release History
 ---------------
+
+Version 0.11 released on 2012-05-09
+
+  * Fix: made deb package compatible with ubuntu hardy
+  * Fix: added missing commands uic_attach and uic_detach to
+    deb package
+
 Version 0.10 released on 2012-05-09
 
   * Feature: Added support for Debian squeeze
