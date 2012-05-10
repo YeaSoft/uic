@@ -19,6 +19,8 @@ install:
 	install -o root -g root -m 0744 bin/uic_enter	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_build	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_clean	$(DESTDIR)/usr/bin
+	install -o root -g root -m 0744 bin/uic_attach	$(DESTDIR)/usr/bin
+	install -o root -g root -m 0744 bin/uic_detach	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_pack	$(DESTDIR)/usr/bin
 	sed 's/@VERSION@/$(VERSION)/g' bin/uic_utils >	$(DESTDIR)/usr/bin/uic_utils
 	touch -r bin/uic_utils				$(DESTDIR)/usr/bin/uic_utils
@@ -29,6 +31,8 @@ uninstall:
 	rm -f $(DESTDIR)/etc/uic.conf
 	rm -f $(DESTDIR)/usr/bin/uic_utils
 	rm -f $(DESTDIR)/usr/bin/uic_pack
+	rm -f $(DESTDIR)/usr/bin/uic_detach
+	rm -f $(DESTDIR)/usr/bin/uic_attach
 	rm -f $(DESTDIR)/usr/bin/uic_clean
 	rm -f $(DESTDIR)/usr/bin/uic_build
 	rm -f $(DESTDIR)/usr/bin/uic_enter

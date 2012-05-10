@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.10    2012-05-09
+Release Notes - uic - Ubuntu Installation Creator - Version 0.11    2012-05-10
 ==============================================================================
 
 * Release Scope
@@ -15,11 +15,14 @@ of templates for Alix boards started in the previous release. Since under
 certian aspects Debian may be more suitable for operating small appliances, it
 is now time to test and adapt uic also to Debian based installations.
 In addition to supporting Debian for the first time, this release offers also
-some additional features needed as side effect of the debian compatibility.
+some additional features needed as a side effect of the debian compatibility.
 
 
 What's new
 ----------
+  * Fix: made deb package compatible with ubuntu hardy
+  * Fix: added missing commands uic_attach and uic_detach to
+    deb package
   * Feature: Added support for Debian squeeze
   * Feature: Added support for installing bundled .deb packages
   * Feature: New build step "report" creates an installation report
@@ -37,15 +40,29 @@ Known Problems
 --------------
 
  * The command uic_update is still not implemented
- * During the execution of uic_create and uic_upgrade it still happens that
+ * During the execution of uic_create and uic_upgrade it still may happen that
    some process is started in the chroot preventing the special filesystems to
-   be unmounted. This happens currently with NetPoldo 10.04 and is fixed by
-   a workaround stopping all possibly afected services in the hook script
+   be unmounted. This happens sometime with NetPoldo 10.04 and is fixed by a
+   workaround stopping all possibly affected services in the hook script
    'chroot_post_installation'
 
 
 Release History
 ---------------
+Version 0.10 released on 2012-05-09
+
+  * Feature: Added support for Debian squeeze
+  * Feature: Added support for installing bundled .deb packages
+  * Feature: New build step "report" creates an installation report
+  * Feature: New build step "archive" produces an archive of the root
+    filesystem
+  * Fix: binary package architecture set to "all"
+  * Fix: remove debris (/run/shm on /run/shm) in mount table after
+    operations requiring special fs mounts
+  * Fix: reconfigure steps are not mandatory any more (UIC_RECONFIGURE
+    can be left empty)
+  * Fix: locales are regenerated also on uic_upgrade
+
 Version 0.09 released on 2012-04-29
 
   * Added support for launchpad PPA through UIC_PPAS in uictpl.conf
