@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120506
+# Version 20120511
 # This script creates an Ubuntu installation environment
 
 #####################################
@@ -77,7 +77,7 @@ verify_environment $1
 
 if [ -d "$TARGET/chroot" ]; then
 	# test if there is already a populated installation
-	if [ $(find "$TARGET/chroot" | wc -l) -gt 1 -a $FORCE -lt 1 ]; then
+	if [ $(find "$TARGET/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a $FORCE -lt 1 ]; then
 		show_error "Target installation environment ${TARGETNAME} is already existing. Use -F to force cleanup."
 		exit 1
 	fi
@@ -86,10 +86,15 @@ if [ -d "$TARGET/chroot" ]; then
 	test_mountinuse
 
 	# clean up installation area if needed
-	if [ $(find "$TARGET/chroot" | wc -l) -gt 1 -a $FORCE -gt 0 ]; then
+	if [ $(find "$TARGET/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a $FORCE -gt 0 ]; then
 		show_verbose 1 "Cleaning up target installation environment ${TARGETNAME}..."
-		rm -rf "$TARGET/chroot"
-		mkdir -p "$TARGET/chroot"
+		if [ -d "$TARGET/chroot/lost+found" ]; then
+			show_error "Cannot clean mounted installation environment. Partition should be formatted manually."
+			exit 1
+		else
+			rm -rf "$TARGET/chroot"
+			mkdir -p "$TARGET/chroot"
+		fi
 	fi
 else
 	mkdir -p "$TARGET/chroot"
@@ -106,7 +111,11 @@ test_builder_compatibility
 
 show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
 call_hook pre_debootstrap
-debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+if [ -n "${UIC_PREINSTALL}" ]; then
+	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+else
+	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+fi
 test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
 call_hook post_debootstrap
 

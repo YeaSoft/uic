@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120424
+# Version 20120511
 # This script attaches a partition or directory to an Ubuntu
 # installation environment
 
@@ -98,6 +98,7 @@ if grep "$TARGET/chroot " /proc/mounts > /dev/null; then
 fi
 
 show_verbose 1 "Attaching $MOUNT_SOURCE to the environment..."
+mkdir -p "$TARGET/chroot"
 mount $MOUNT_PARAMS "$MOUNT_SOURCE" "$TARGET/chroot"
 test_exec mount mount $MOUNT_PARAMS "$MOUNT_SOURCE" "$TARGET/chroot"
 

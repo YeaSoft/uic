@@ -1,11 +1,11 @@
-.TH uic_build 7 "10 May 2012" "Version 0.11" "Ubuntu Installation Creator"
+.TH uic_build 7 "11 May 2012" "Version 0.11" "Ubuntu Installation Creator"
 .SH NAME
 uic_build - executes a build/deployment process of the installation in the specified installation environment
 
 .SH SYNOPSIS
 .SP
 .B uic_build [-hvlC] [
-.I -b <build step number>
+.I -b <build step number>[,<build step number>...]
 .B ] [
 .I <environment_path>
 .B ]
@@ -46,8 +46,8 @@ show the list of defined build targets. If specified no build will be performed.
 skips the installation customization
 
 .TP
-.B -b <number>, --build-target <number>
-builds only the build target with index number <number>
+.B -b <number>[,<number>...], --build-target <number>[,<number>...]
+builds only the build targets with index numbers <number>
 
 
 .SH EXAMPLES

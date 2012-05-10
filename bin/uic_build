@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120509
+# Version 20120511
 # This script produces the deliverables of an Ubuntu installation environment
 
 #####################################
@@ -20,6 +20,7 @@ source uic_utils
 # initialize runtime variables
 SKIP_CUSTOMIZATION=0
 LIST_TARGETS=0
+BUILD_TARGETS=
 BUILD_TARGET=
 VBPARAM=""
 
@@ -28,10 +29,11 @@ VBPARAM=""
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvlC] [-b <number>] [<environment name>]
+usage: $SCRIPTNAME [-hvlC] [-b <number>[,<number>]..] [<environment name>]
 
 Options:
- -b, --build-target <number>  builds only the build target with index number <number>
+ -b, --build-target <number>  builds only the build targets with index numbers
+                              <number>
  -C, --skip-customization     skips the target customization
  -l, --list                   show the list of defined build targets
  -v, --verbose                increase verbosity
@@ -39,11 +41,11 @@ Options:
 
 This script produces the deliverables of an Ubuntu installation environment
 
-<environment name> can be omitted if the command is launched from within the environment
-directory. Otherwise it can be:
+<environment name> can be omitted if the command is launched from within the
+environment directory. Otherwise it can be:
 
-- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
-- a path to the intended environment directory relative to the current directory
+- an absolute path to the intended environment directory (e.g.: /home/kp/alix)
+- a path to the intended environment directory relative to the current dir
 - a path to the intended environment directory relative to /usr/src
 
 EOF
@@ -386,7 +388,7 @@ while true; do
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-l|--list)			LIST_TARGETS=1; shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
-	-b|--build-target)		BUILD_TARGET=$2; shift 2;;
+	-b|--build-target)		BUILD_TARGETS="$(echo "$2" | tr , " ")"; shift 2;;
 	--)				shift; break;;
         *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
@@ -438,18 +440,22 @@ fi
 call_hook pre_build
 call_chroot_hook chroot_pre_build
 
-if [ -n "$BUILD_TARGET" ]; then
-	if [ $(expr match "$BUILD_TARGET" "[0-9]*") -ne ${#BUILD_TARGET} ]; then
-		show_error "non numeric build target index specified. use uic build --list to view valid build targets indices"
-		exit 1
-	fi
-	if [ $BUILD_TARGET -ge 0 -a $BUILD_TARGET -lt ${#UIC_TARGET[@]} ]; then
-		show_verbose 2 "Building specific target $BUILD_TARGET..."
-		build_target ${UIC_TARGET[$BUILD_TARGET]}
-	else
-		show_error "invalid build target index specified. use uic build --list to view valid build targets indices"
-		exit 1
-	fi
+if [ -n "$BUILD_TARGETS" ]; then
+	for BUILD_TARGET in $BUILD_TARGETS; do
+		if [ $(expr match "$BUILD_TARGET" "[0-9]*") -ne ${#BUILD_TARGET} ]; then
+			show_error "non numeric build target index specified. use uic build --list to view valid build targets indices"
+			exit 1
+		fi
+	done
+	for BUILD_TARGET in $BUILD_TARGETS; do
+		if [ $BUILD_TARGET -ge 0 -a $BUILD_TARGET -lt ${#UIC_TARGET[@]} ]; then
+			show_verbose 2 "Building specific target $BUILD_TARGET..."
+			build_target ${UIC_TARGET[$BUILD_TARGET]}
+		else
+			show_error "invalid build target index specified. use uic build --list to view valid build targets indices"
+			exit 1
+		fi
+	done
 else
 	show_verbose 2 "Building all targets..."
 	for target_index in $(seq 0 $((${#UIC_TARGET[@]} - 1))); do

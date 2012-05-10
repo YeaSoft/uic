@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.11    2012-05-10
+Release Notes - uic - Ubuntu Installation Creator - Version 0.12    2012-05-11
 ==============================================================================
 
 * Release Scope
@@ -20,6 +20,14 @@ some additional features needed as a side effect of the debian compatibility.
 
 What's new
 ----------
+  * Fix: working dir is created in uic attach if not existent
+  * Feature: uic_build can now accept a comma separated list of build steps
+  * Fix: fixed uic_create that did not take in consideration lost+found when
+    testing the working dir for emptiness
+  * Feature: new template option UIC_PREINSTALL permits to define additional
+    packages to install during debootstrap (e.g. all packages that need
+    reconfiguration). WARNING: this feature works only in uic_create but not
+    in uic_upgrade -I
   * Fix: made deb package compatible with ubuntu hardy
   * Fix: added missing commands uic_attach and uic_detach to
     deb package
