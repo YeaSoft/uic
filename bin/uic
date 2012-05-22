@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120330
+# Version 20120522
 # This script is the dispatcher of the Ubuntu Installation Creator
 
 #####################################
@@ -23,7 +23,6 @@ usage: $SCRIPTNAME <command> [...]
 
 Commands:
         prepare           prepares an installation environment
-        update            updates the installation environment
         create            creates the installation
         upgrade           upgrades the installation
         enter             chroots into the installation

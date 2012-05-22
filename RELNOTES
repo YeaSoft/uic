@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.12    2012-05-11
+Release Notes - uic - Ubuntu Installation Creator - Version 0.13    2012-05-22
 ==============================================================================
 
 * Release Scope
@@ -10,45 +10,28 @@ Release Notes - uic - Ubuntu Installation Creator - Version 0.12    2012-05-11
 
 Release Scope
 -------------
-This release continues the implementation of features inspired by the creation
-of templates for Alix boards started in the previous release. Since under
-certian aspects Debian may be more suitable for operating small appliances, it
-is now time to test and adapt uic also to Debian based installations.
-In addition to supporting Debian for the first time, this release offers also
-some additional features needed as a side effect of the debian compatibility.
+This release provides consolidations based on the experiences collected during
+the development of the Alix Software Project by using UIC as an installation
+tool.
 
 
 What's new
 ----------
-  * Fix: working dir is created in uic attach if not existent
-  * Feature: uic_build can now accept a comma separated list of build steps
-  * Fix: fixed uic_create that did not take in consideration lost+found when
-    testing the working dir for emptiness
-  * Feature: new template option UIC_PREINSTALL permits to define additional
-    packages to install during debootstrap (e.g. all packages that need
-    reconfiguration). WARNING: this feature works only in uic_create but not
-    in uic_upgrade -I
-  * Fix: made deb package compatible with ubuntu hardy
-  * Fix: added missing commands uic_attach and uic_detach to
-    deb package
-  * Feature: Added support for Debian squeeze
-  * Feature: Added support for installing bundled .deb packages
-  * Feature: New build step "report" creates an installation report
-  * Feature: New build step "archive" produces an archive of the root
-    filesystem
-  * Fix: binary package architecture set to "all"
-  * Fix: remove debris (/run/shm on /run/shm) in mount table after
-    operations requiring special fs mounts
-  * Fix: reconfigure steps are not mandatory any more (UIC_RECONFIGURE
-    can be left empty)
-  * Fix: locales are regenerated also on uic_upgrade
 
+ * Fix: uic pack now creates a clean .md5 file without any path component
+ * Fix: uic create and uic upgrade should not ask any more for user input
+   when trying to overwrite modified configuration files from the uic template
+ * Fix: file customizations are re-applied at the end of uic create and uic
+   upgrade since sometimes package update or installation overwrite files
+   without asking
+ * Fix: verbosity of apt is now dependant upon the uic verbosity level
+ * Fix: compatibility checking prevents running uic on unsupported platforms
+   or with templates with targets not compatible with the hosting system
 
 Known Problems
 --------------
 
- * The command uic_update is still not implemented
- * During the execution of uic_create and uic_upgrade it still may happen that
+ * During the execution of uic_create and uic_upgrade it may still happen that
    some process is started in the chroot preventing the special filesystems to
    be unmounted. This happens sometime with NetPoldo 10.04 and is fixed by a
    workaround stopping all possibly affected services in the hook script
@@ -57,6 +40,17 @@ Known Problems
 
 Release History
 ---------------
+
+Version 0.12 released on 2012-05-11
+
+  * Fix: working dir is created in uic attach if not existent
+  * Feature: uic_build can now accept a comma separated list of build steps
+  * Fix: fixed uic_create that did not take in consideration lost+found when
+    testing the working dir for emptiness
+  * Feature: new template option UIC_PREINSTALL permits to define additional
+    packages to install during debootstrap (e.g. all packages that need
+    reconfiguration). WARNING: this feature works only in uic_create but not
+    in uic_upgrade -I
 
 Version 0.11 released on 2012-05-09
 

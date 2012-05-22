@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120509
+# Version 20120522
 # This script upgrades an Ubuntu installation environment
 
 #####################################
@@ -20,6 +20,7 @@ source uic_utils
 # initialize runtime variables
 SKIP_CUSTOMIZATION=0
 DO_REINSTALLATIONS=0
+QUIET=-qq
 
 #####################################
 # function section
@@ -67,8 +68,8 @@ done
 # configuration checking
 case "$VERBOSE" in
 0)	;;
-1)	show_name;;
-*)	show_name;;
+1)	QUIET=-q; show_name;;
+*)	QUIET=""; show_name;;
 esac
 
 # check if we have all that we need
@@ -120,14 +121,14 @@ chroot "$TARGET/chroot" apt-get update
 test_exec chroot apt-get update
 
 show_verbose 1 "Updating system..."
-chroot $TARGET/chroot apt-get -y upgrade
-test_exec chroot "$TARGET/chroot" apt-get -y upgrade
+chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
+test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
 
 if [ $DO_REINSTALLATIONS -gt 0 ]; then
 	if [ -n "$UIC_SOFTWARE" ]; then
 		show_verbose 1 "Installing software..."
-		chroot "$TARGET/chroot" apt-get -y install $UIC_SOFTWARE
-		test_exec chroot $TARGET/chroot apt-get -y install $UIC_SOFTWARE
+		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
+		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
 	fi
 
 	if [ -d "$TARGET/install" ]; then
@@ -140,8 +141,8 @@ if [ $DO_REINSTALLATIONS -gt 0 ]; then
 		rmdir "$TARGET/chroot/install"
 		case $result in
 		0)	;;
-		1)	chroot "$TARGET/chroot" apt-get -y -f install
-			test_exec chroot "$TARGET/chroot" apt-get -y -f install
+		1)	chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
+			test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
 			;;
 		2)	;;
 		*)	show_error "Failed to install additional packages ($result)"
@@ -152,12 +153,17 @@ if [ $DO_REINSTALLATIONS -gt 0 ]; then
 
 	if [ -n "$UIC_KERNEL" ]; then
 		show_verbose 1 "Installing kernel..."
-		chroot "$TARGET/chroot" apt-get -y install $UIC_KERNEL
-		test_exec chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
+		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_KERNEL
+		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_KERNEL
 	fi
 fi
 
 exit_apt_proxy
+
+if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+	# just in case something was changed by apt-get
+	apply_customizations
+fi
 
 call_chroot_hook chroot_post_installation
 call_hook post_installation

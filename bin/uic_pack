@@ -103,8 +103,6 @@ if [ $ONLYUPDATE -eq 0 ]; then
 	else
 		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --exclude "${TARGETNAME}/custom.conf" --transform "s/${TARGETNAME}/${UIC_SRCNAME}/g" "${TARGETNAME}"
 	fi
-	MD5TEMP=$(mktemp)
-	md5sum -b "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" > $MD5TEMP
-	sed -e "s/ \*\/.*\// \*/g" < "$MD5TEMP" > "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.md5"
-	rm "$MD5TEMP"
+	MD5SUM=$(md5sum -b "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" | cut -d" " -f 1)
+	echo "${MD5SUM} *${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" > "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.md5"
 fi

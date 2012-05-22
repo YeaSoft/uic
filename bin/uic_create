@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120511
+# Version 20120522
 # This script creates an Ubuntu installation environment
 
 #####################################
@@ -19,6 +19,7 @@ source uic_utils
 
 # initialize runtime variables
 FORCE=0
+QUIET=-qq
 
 #####################################
 # function section
@@ -64,8 +65,8 @@ done
 # configuration checking
 case "$VERBOSE" in
 0)	;;
-1)	show_name;;
-*)	show_name;;
+1)	QUIET=-q; show_name;;
+*)	QUIET=""; show_name;;
 esac
 
 # check if we have all that we need
@@ -137,8 +138,8 @@ fi
 
 show_verbose 1 "Updating package sources..."
 init_apt_proxy
-chroot "$TARGET/chroot" apt-get update
-test_exec chroot chroot apt-get update
+chroot "$TARGET/chroot" apt-get ${QUIET} update
+test_exec chroot chroot apt-get ${QUIET} update
 exit_apt_proxy
 
 process_locales
@@ -160,12 +161,12 @@ fi
 
 show_verbose 1 "Updating system..."
 init_apt_proxy
-chroot $TARGET/chroot apt-get -y upgrade
-test_exec chroot chroot "$TARGET/chroot" apt-get -y upgrade
+chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
+test_exec chroot chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
 if [ -n "$UIC_SOFTWARE" ]; then
 	show_verbose 1 "Installing software..."
-	chroot "$TARGET/chroot" apt-get -y install $UIC_SOFTWARE
-	test_exec chroot chroot $TARGET/chroot apt-get -y install $UIC_SOFTWARE
+	chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
+	test_exec chroot chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
 fi
 
 if [ -d "$TARGET/install" ]; then
@@ -178,8 +179,8 @@ if [ -d "$TARGET/install" ]; then
 	rmdir "$TARGET/chroot/install"
 	case $result in
 	0)	;;
-	1)	chroot "$TARGET/chroot" apt-get -y -f install
-		test_exec chroot "$TARGET/chroot" apt-get -y -f install
+	1)	chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
+		test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
 		;;
 	2)	;;
 	*)	show_error "Failed to install additional packages ($result)"
@@ -190,10 +191,13 @@ fi
 
 if [ -n "$UIC_KERNEL" ]; then
 	show_verbose 1 "Installing kernel..."
-	chroot "$TARGET/chroot" apt-get -y install $UIC_KERNEL
-	test_exec chroot chroot $TARGET/chroot apt-get -y install $UIC_KERNEL
+	chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_KERNEL
+	test_exec chroot chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_KERNEL
 fi
 exit_apt_proxy
+
+# just in case something was changed by apt-get
+apply_customizations
 
 case "${UIC_ROOTPASSWORD}" in
 "")	show_warning "Password will not be initialized"

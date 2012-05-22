@@ -2,8 +2,8 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120509
-# function collection for the netpoldo development system
+# VERSION 20120522
+# function collection for the ubuntu installation system
 
 #####################
 # Internal Variables
@@ -103,6 +103,7 @@ function chroot_init() {
 		show_verbose 1 "Mounting special file systems in environment..."
 		mount_special
 		enable_policy
+		enable_dpkg_options
 		SPECIALFSMOUNT=1
 	fi
 }
@@ -124,6 +125,17 @@ function disable_policy() {
 	[ -f "${TARGET}/chroot/usr/sbin/policy-rc.d" ] && rm "${TARGET}/chroot/usr/sbin/policy-rc.d"
 }
 
+function enable_dpkg_options() {
+	mkdir -p "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d"
+	echo "# automatically added by uic - will be deleted at eond of run" > "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	echo "force-confdef" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	echo "force-confold" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+}
+
+function disable_dpkg_options() {
+	[ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts" ] && rm "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+}
+
 function umount_special() {
 	for MOUNT_POINT in $SPECIALFSU; do
 		if grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
@@ -135,6 +147,7 @@ function umount_special() {
 function chroot_exit() {
 	if [ $SPECIALFSMOUNT -gt 0 ]; then
 		show_verbose 1 "Unmounting special file systems in environment..."
+		disable_dpkg_options
 		disable_policy
 		umount_special 2> /dev/null
 		SPECIALFSMOUNT=0
@@ -258,11 +271,6 @@ function test_environment() {
 		show_error "Environment $1 is invalid"
 		exit 1
 	fi
-
-#	if [ $(expr match "$1" '.*\/.*') -ne 0 ]; then
-#		show_error "Target $1 cannot be a path"
-#		exit 1
-#	fi
 }
 
 function test_environment_empty() {
@@ -301,12 +309,8 @@ function test_environment_configuration() {
 		show_error "UIC_KERNEL missing in environment configuration file"
 		exit 1
 	fi
-	if [ -z "${UIC_SOFTWARE}" ]; then
-		show_error "UIC_SOFTWARE missing in environment configuration file"
-		exit 1
-	fi
-#	if [ -z "${UIC_RECONFIGURE}" ]; then
-#		show_error "UIC_RECONFIGURE missing in environment configuration file"
+#	if [ -z "${UIC_SOFTWARE}" ]; then
+#		show_error "UIC_SOFTWARE missing in environment configuration file"
 #		exit 1
 #	fi
 	if [ -z "${UIC_ROOTPASSWORD}" ]; then
@@ -315,7 +319,7 @@ function test_environment_configuration() {
 	fi
 }
 
-function test_builder_compatibility() {
+function test_arch_compatibility() {
 	MY_ARCH=$(dpkg-query -W -f='${Architecture}\n' dpkg)
 	if [ "${MY_ARCH}" = "${UIC_ARCH}" ]; then
 		show_verbose 2 "Target has the same architecture (${MY_ARCH})"
@@ -328,8 +332,86 @@ function test_builder_compatibility() {
 			fi
 			;;
 	esac
-	show_error "Target architecture ${UIC_ARCH} not compatible with ${MY_ARCH}"
-	exit 3;
+	return 3
+}
+
+function test_distributor_compatibility() {
+	if ! which lsb_release > /dev/null; then
+		# no lsb_release on this platform
+		return 3;
+	fi
+	MY_DISTRIB=$(lsb_release -is)
+	case "${MY_DISTRIB}" in
+	"Ubuntu")	return 0;;
+	"Debian")	return 0;;
+	esac
+	return 3
+}
+
+function test_release_compatibility() {
+	if ! which lsb_release > /dev/null; then
+		# no lsb_release on this platform
+		return 3;
+	fi
+	MY_RELEASE=$(lsb_release -cs)
+	case "${MY_RELEASE}" in
+	"squeeze")	case "${UIC_RELEASE}" in
+			"squeeze")	return 0;;
+			esac;;
+	"hardy")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			esac;;
+	"lucid")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			"lucid")	return 0;;
+			esac;;
+	"maverick")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			"lucid")	return 0;;
+			"maverick")	return 0;;
+			esac;;
+	"natty")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			"lucid")	return 0;;
+			"maverick")	return 0;;
+			"natty")	return 0;;
+			"squeeze")	return 0;;
+			esac;;
+	"oneiric")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			"lucid")	return 0;;
+			"maverick")	return 0;;
+			"natty")	return 0;;
+			"oneiric")	return 0;;
+			"squeeze")	return 0;;
+			esac;;
+	"precise")	case "${UIC_RELEASE}" in
+			"hardy")	return 0;;
+			"lucid")	return 0;;
+			"maverick")	return 0;;
+			"natty")	return 0;;
+			"oneiric")	return 0;;
+			"precise")	return 0;;
+			"squeeze")	return 0;;
+			esac;;
+	esac
+	return 3
+}
+
+function test_builder_compatibility() {
+	if ! test_distributor_compatibility; then
+		show_error "This system is not compatible with the specified template"
+		exit 3
+	fi
+	if ! test_release_compatibility; then
+		show_error "The release of this computer is not compatible with the specified template"
+		exit 3
+	fi
+	if ! test_arch_compatibility; then
+		show_error "Target architecture ${UIC_ARCH} not compatible with ${MY_ARCH}"
+		exit 3
+	fi
+	return 0
 }
 
 function cleanup_apt_cache() {
