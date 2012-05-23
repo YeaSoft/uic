@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.13    2012-05-22
+Release Notes - uic - Ubuntu Installation Creator - Version 0.14    2012-05-23
 ==============================================================================
 
 * Release Scope
@@ -18,6 +18,10 @@ tool.
 What's new
 ----------
 
+ * Fix: dpkg unattended setup/update was not working for older ubuntu
+   versions
+ * Fix: compatibility matrix prevented installation of debian from
+   ubuntu lucid and maverick
  * Fix: uic pack now creates a clean .md5 file without any path component
  * Fix: uic create and uic upgrade should not ask any more for user input
    when trying to overwrite modified configuration files from the uic template
@@ -40,6 +44,18 @@ Known Problems
 
 Release History
 ---------------
+
+Version 0.13 released on 2012-05-22
+
+ * Fix: uic pack now creates a clean .md5 file without any path component
+ * Fix: uic create and uic upgrade should not ask any more for user input
+   when trying to overwrite modified configuration files from the uic template
+ * Fix: file customizations are re-applied at the end of uic create and uic
+   upgrade since sometimes package update or installation overwrite files
+   without asking
+ * Fix: verbosity of apt is now dependant upon the uic verbosity level
+ * Fix: compatibility checking prevents running uic on unsupported platforms
+   or with templates with targets not compatible with the hosting system
 
 Version 0.12 released on 2012-05-11
 

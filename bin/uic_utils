@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20120522
+# VERSION 20120523
 # function collection for the ubuntu installation system
 
 #####################
@@ -126,14 +126,24 @@ function disable_policy() {
 }
 
 function enable_dpkg_options() {
-	mkdir -p "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d"
-	echo "# automatically added by uic - will be deleted at eond of run" > "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
-	echo "force-confdef" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
-	echo "force-confold" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# this method does not work with older versions
+	# mkdir -p "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d"
+	# echo "# automatically added by uic - will be deleted at end of operation" > "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# echo "force-confdef" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# echo "force-confold" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# alternative method
+	mv "${TARGET}/chroot/etc/dpkg/dpkg.cfg" "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save"
+	cp "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
+	echo "# automatically added by uic - will be deleted at end of operation" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
+	echo "force-confdef" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
+	echo "force-confold" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
 }
 
 function disable_dpkg_options() {
-	[ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts" ] && rm "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# this method does not work with older versions
+	# [ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts" ] && rm "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
+	# alternative method
+	[ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" ] && mv "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
 }
 
 function umount_special() {
@@ -364,11 +374,13 @@ function test_release_compatibility() {
 	"lucid")	case "${UIC_RELEASE}" in
 			"hardy")	return 0;;
 			"lucid")	return 0;;
+			"squeeze")	return 0;;
 			esac;;
 	"maverick")	case "${UIC_RELEASE}" in
 			"hardy")	return 0;;
 			"lucid")	return 0;;
 			"maverick")	return 0;;
+			"squeeze")	return 0;;
 			esac;;
 	"natty")	case "${UIC_RELEASE}" in
 			"hardy")	return 0;;
