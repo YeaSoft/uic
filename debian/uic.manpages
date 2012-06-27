@@ -7,4 +7,5 @@ doc/uic_detach.7
 doc/uic_enter.7
 doc/uic_get.7
 doc/uic_pack.7
+doc/uic_install.7
 doc/uic_upgrade.7

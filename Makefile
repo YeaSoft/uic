@@ -17,6 +17,7 @@ install:
 #	install -o root -g root -m 0744 bin/uic_update	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_create	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_upgrade	$(DESTDIR)/usr/bin
+	install -o root -g root -m 0744 bin/uic_install	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_enter	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_build	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_clean	$(DESTDIR)/usr/bin
@@ -38,6 +39,7 @@ uninstall:
 	rm -f $(DESTDIR)/usr/bin/uic_build
 	rm -f $(DESTDIR)/usr/bin/uic_enter
 	rm -f $(DESTDIR)/usr/bin/uic_upgrade
+	rm -f $(DESTDIR)/usr/bin/uic_install
 	rm -f $(DESTDIR)/usr/bin/uic_create
 #	rm -f $(DESTDIR)/usr/bin/uic_update
 	rm -f $(DESTDIR)/usr/bin/uic_prepare

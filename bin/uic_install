@@ -1,0 +1,142 @@
+#!/bin/bash
+#
+# (c) 2012 YeaSoft Int'l - Leo Moll
+#
+# Version 20120627
+# This script installs packages into an Ubuntu installation environment
+
+#####################################
+# script initialization
+
+# load function library
+source uic_utils
+
+# load user customized configuration data
+[ -f /etc/uic.conf ] &&	source /etc/uic.conf
+
+#####################################
+# variables section
+
+# initialize runtime variables
+SKIP_CUSTOMIZATION=0
+DO_REINSTALLATIONS=0
+QUIET=-qq
+
+#####################################
+# function section
+
+function usage {
+	cat <<EOF
+usage: $SCRIPTNAME [-hvIC] [<environment name>] <package> [<package> [..]]
+
+Options:
+ -I, --do-reinstallations     reinstall all default packages
+ -C, --skip-customization     skips the installation customization
+ -v, --verbose                increase verbosity
+(-h) --help                   show this help (-h works with no other options)
+
+This script installs specified packages into an Ubuntu installation environment
+
+<environment name> can be omitted if the command is launched from within the
+environment directory. Otherwise it can be:
+
+- an absolute path to the intended environment directory
+  (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current path
+- a path to the intended environment directory relative to /usr/src
+
+EOF
+}
+
+#####################################
+# script section
+
+# Parameter parsing
+PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,C,I --longoptions help,verbose,skip-customization,do-reinstallations -- "$@")
+test_getopt
+eval set -- "$PARSER"
+while true; do
+	case "$1" in
+	-h|--help)			show_name; echo; usage; exit 1;;
+	-v|--verbose)			(( VERBOSE++ )); shift;;
+	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
+	-I|--do-reinstallations)	DO_REINSTALLATIONS=1; shift;;
+	--)				shift; break;;
+        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        esac
+done
+
+# configuration checking
+case "$VERBOSE" in
+0)	;;
+1)	QUIET=-q; show_name;;
+*)	QUIET=""; show_name;;
+esac
+
+# check if we have all that we need
+test_prereq
+
+# preflights checks and destination detection
+if [ -f uictpl.conf -a -d files ]; then
+	find_environment
+	verify_environment
+else
+	find_environment $1
+	verify_environment $1
+	# eat the environment parameter
+	shift;
+fi
+
+# checks if the installation environment has been populated
+test_environment_empty
+
+# checks if nobody other is working in the environment
+test_mountinuse
+
+# load target configuration
+show_verbose 2 "Loading environment configuration..."
+source "$TARGET/uictpl.conf"
+[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
+test_environment_configuration
+
+# check builder compatibility
+test_builder_compatibility
+
+show_verbose 2 "Preparing chroot special filesystems..."
+init_script
+chroot_init
+
+if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+	apply_customizations
+	# just in case something has changed
+	process_locales
+fi
+
+call_hook pre_installation
+call_chroot_hook chroot_pre_installation
+
+init_apt_proxy
+
+install_ppas
+
+update_sources
+update_system
+
+if [ $DO_REINSTALLATIONS -gt 0 ]; then
+	install_software
+	install_packages
+	install_kernel
+fi
+
+exit_apt_proxy
+
+if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+	# just in case something was changed by apt-get
+	apply_customizations
+fi
+
+call_chroot_hook chroot_post_installation
+call_hook post_installation
+
+show_verbose 2 "Cleaning up chroot special filesystems..."
+chroot_exit

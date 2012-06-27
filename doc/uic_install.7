@@ -1,27 +1,22 @@
-.TH uic_pack 7 "23 May 2012" "Version 0.14" "Ubuntu Installation Creator"
+.TH uic_install 7 "23 May 2012" "Version 0.14" "Ubuntu Installation Creator"
 .SH NAME
-uic_pack - packages an installation environment for redistribution as a uic template
+uic_install - installs packages in the specified installation environment
 
 .SH SYNOPSIS
 .SP
-.B uic_pack [-hvu] [
-.I -o <output path>
-.B ] [
-.I <environment_path>
-.B ]
+.BI "uic_install [-hvIC] [" "<environment_path>" "] " "<package>" " [" "<package>" " [..]]"
 
 .SH DESCRIPTION
-.B uic_pack
-.RI "creates or updates the integrity information (" "uictpl.md5" ") and packages an"
-installation environment for redistribution as a uic template. The resulting distribution
-archive (a bzippped tar file) will be named
+.B uic_install
+.R performs an installation of the specified package list in the specified installation
+environment. In order to take in account potential changes in the list of additional
+software specified in the installation template, a software reinstallation can be requested.
 .PP
-.RS
-.B ${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2
-.RE
+.RI "The special filesystems " "/sys" ", " "/proc" ", " "/dev" ", " "/dev/pts" " and " "/dev/shm "
+are mounted in the installation in order to offer full functionality. The undesired automatic start
+of services performed by software installation is inhibited by a temporary policy
+.RI "(" "/usr/sbin/policy-rc.d" " fails with return code 101)."
 .PP
-.RI "based on the values in " "uictpl.conf " "of the installation environment and is by default"
-saved in the default working path (/usr/src).
 
 .IR "<environment_path> " "can be omitted if the command is launched from within the environment
 directory. Otherwise it can be:
@@ -31,6 +26,7 @@ an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
 a path to the environment directory relative to the current directory
 .IP -
 a path to the environment directory relative to the default working path (usually /usr/src)
+.PP
 
 .SH OPTIONS
 .TP
@@ -42,27 +38,12 @@ shows the help for the command.
 increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
 
 .TP
-.B -u, --update
-only update the integrity information
+.B -I, --do-reinstallations
+reinstall all default packages
 
 .TP
-.B -o <output path>, --output <output path>
-save the resulting archive into <output path>
-
-.SH EXAMPLES
-
-.TP
-.B uic_pack -u /home/leo/uic-projects/netpoldo-1004-32
-.RI "creates or updates the integrity information (" "uictpl.md5" ") in the installation"
-.RI "environment in " "/home/leo/uic-projects/netpoldo-1004-32" "."
-
-.TP
-.B uic_pack -v
-if the current directory is the home of an installation environment (the
-.IR "uictpl.conf " "file is there), the integrity information (" "uictpl.md5" ") will be"
-updated and a template redistribution archive will be created in the default working path
-(/usr/src). The command will produce verbose output.
-
+.B -C, --skip-customization
+skips the installation customization
 
 .SH FILES
 .TP 26n

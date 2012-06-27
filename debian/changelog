@@ -1,4 +1,6 @@
 uic (0.15) lucid; urgency=low
+  * Feature: new command uic install permits the direct installation of
+    packages into the installation environment
   * Fix: PPA can now also be installed if the certificate of the launchpad
     site cannot be verified
   * Feature: uic prepare has been renamed to uic get since this name
