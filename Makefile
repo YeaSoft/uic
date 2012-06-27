@@ -12,7 +12,8 @@ install:
 
 	install -o root -g root -m 0644 etc/uic.conf	$(DESTDIR)/etc
 	install -o root -g root -m 0744 bin/uic		$(DESTDIR)/usr/bin
-	install -o root -g root -m 0744 bin/uic_prepare	$(DESTDIR)/usr/bin
+	install -o root -g root -m 0744 bin/uic_get	$(DESTDIR)/usr/bin
+#	install -o root -g root -m 0744 bin/uic_prepare	$(DESTDIR)/usr/bin
 #	install -o root -g root -m 0744 bin/uic_update	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_create	$(DESTDIR)/usr/bin
 	install -o root -g root -m 0744 bin/uic_upgrade	$(DESTDIR)/usr/bin
@@ -40,4 +41,5 @@ uninstall:
 	rm -f $(DESTDIR)/usr/bin/uic_create
 #	rm -f $(DESTDIR)/usr/bin/uic_update
 	rm -f $(DESTDIR)/usr/bin/uic_prepare
+	rm -f $(DESTDIR)/usr/bin/uic_get
 	rm -f $(DESTDIR)/usr/bin/uic
