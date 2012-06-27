@@ -170,7 +170,7 @@ function test_mountinuse() {
 		show_error "         because of an active preparation session. The execution will be"
 		show_error "         terminated in order to prevent damage to the instllation environment"
 		exit 5
-	fi	
+	fi
 }
 
 function cleanup_mounts() {
@@ -319,10 +319,6 @@ function test_environment_configuration() {
 		show_error "UIC_KERNEL missing in environment configuration file"
 		exit 1
 	fi
-#	if [ -z "${UIC_SOFTWARE}" ]; then
-#		show_error "UIC_SOFTWARE missing in environment configuration file"
-#		exit 1
-#	fi
 	if [ -z "${UIC_ROOTPASSWORD}" ]; then
 		show_error "UIC_ROOTPASSWORD missing in environment configuration file"
 		exit 1
@@ -659,6 +655,14 @@ function add_ppa() {
 	# query the signing key through the launchpad API
 	TEMPFILE=$(mktemp)
 	wget -q -O $TEMPFILE https://api.launchpad.net/1.0/~$PPA_USER/+archive/$PPA_AREA
+	if [ $? -ne 0 ]; then
+		wget --no-check-certificate -q -O $TEMPFILE https://api.launchpad.net/1.0/~$PPA_USER/+archive/$PPA_AREA
+		ERR=$?
+		if [ $ERR -ne 0 ]; then
+			show_error "Specified PPA $PPA cannot be queried on launchpad"
+			exit $ERR
+		fi
+	fi
 	PPA_INFO=$(sed -e "s/\"//g" < $TEMPFILE)
 	rm $TEMPFILE
 	PPA_FINGERPRINT=$(expr match "$PPA_INFO" '.*signing_key_fingerprint: \([0-9A-F]*\)')
