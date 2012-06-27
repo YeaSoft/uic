@@ -2,7 +2,7 @@
 #
 # (c) 2012 YeaSoft Int'l - Leo Moll
 #
-# Version 20120522
+# Version 20120627
 # This script upgrades an Ubuntu installation environment
 
 #####################################
@@ -37,11 +37,12 @@ Options:
 
 This script upgrades an Ubuntu installation environment
 
-<environment name> can be omitted if the command is launched from within the environment
-directory. Otherwise it can be:
+<environment name> can be omitted if the command is launched from within the
+environment directory. Otherwise it can be:
 
-- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
-- a path to the intended environment directory relative to the current directory
+- an absolute path to the intended environment directory
+  (e.g.: /home/leo/netpoldo-1004-32)
+- a path to the intended environment directory relative to the current path
 - a path to the intended environment directory relative to /usr/src
 
 EOF
@@ -109,53 +110,19 @@ call_chroot_hook chroot_pre_installation
 
 init_apt_proxy
 
-if [ -n "$UIC_PPAS" ]; then
-        for elem in "$UIC_PPAS"; do
-                show_verbose 1 "Adding PPA $elem"
-                add_ppa $elem
-        done
-fi
+install_ppas
 
-show_verbose 1 "Updating package sources..."
-chroot "$TARGET/chroot" apt-get update
-test_exec chroot apt-get update
+update_sources
+update_system
 
 show_verbose 1 "Updating system..."
 chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
 test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
 
 if [ $DO_REINSTALLATIONS -gt 0 ]; then
-	if [ -n "$UIC_SOFTWARE" ]; then
-		show_verbose 1 "Installing software..."
-		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
-		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
-	fi
-
-	if [ -d "$TARGET/install" ]; then
-		show_verbose 1 "Installing supplied packages"
-		mkdir "$TARGET/chroot/install"
-		mount -o bind "$TARGET/install" "$TARGET/chroot/install"
-		chroot "$TARGET/chroot" dpkg --recursive --install /install
-		result=$?
-		umount "$TARGET/chroot/install"
-		rmdir "$TARGET/chroot/install"
-		case $result in
-		0)	;;
-		1)	chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
-			test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
-			;;
-		2)	;;
-		*)	show_error "Failed to install additional packages ($result)"
-			exit $result
-			;;
-		esac
-	fi
-
-	if [ -n "$UIC_KERNEL" ]; then
-		show_verbose 1 "Installing kernel..."
-		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_KERNEL
-		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_KERNEL
-	fi
+	install_software
+	install_packages
+	install_kernel
 fi
 
 exit_apt_proxy

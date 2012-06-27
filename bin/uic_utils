@@ -652,6 +652,12 @@ function add_ppa() {
 		exit 3
 	fi
 
+	# check if ppa is already installed
+	if [ -f "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list" ]; then
+		show_verbose 1 "PPA $1 already installed"
+		return 0
+	fi
+
 	# query the signing key through the launchpad API
 	TEMPFILE=$(mktemp)
 	wget -q -O $TEMPFILE https://api.launchpad.net/1.0/~$PPA_USER/+archive/$PPA_AREA
@@ -679,4 +685,65 @@ function add_ppa() {
 	echo "# apt sources for ${PPA}" > "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
 	echo "deb http://ppa.launchpad.net/${PPA_USER}/${PPA_AREA}/ubuntu ${UIC_RELEASE} main" >> "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
 	echo "deb-src http://ppa.launchpad.net/${PPA_USER}/${PPA_AREA}/ubuntu ${UIC_RELEASE} main" >> "${TARGET}/chroot/etc/apt/sources.list.d/${PPA_USER}-${PPA_AREA}-${UIC_RELEASE}.list"
+
+	return 0
+}
+
+function update_sources {
+	show_verbose 1 "Updating package sources..."
+	chroot "$TARGET/chroot" apt-get ${QUIET} update
+	test_exec chroot apt-get ${QUIET} update
+}
+
+function update_system {
+	show_verbose 1 "Updating system..."
+	chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
+	test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
+}
+
+function install_ppas {
+	if [ -n "$UIC_PPAS" ]; then
+		for elem in "$UIC_PPAS"; do
+			show_verbose 1 "Adding PPA $elem"
+			add_ppa $elem
+		done
+	fi
+}
+
+function install_software {
+	if [ -n "$UIC_SOFTWARE" ]; then
+		show_verbose 1 "Installing software..."
+		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
+		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
+	fi
+}
+
+function install_packages {
+	if [ -d "$TARGET/install" ]; then
+		show_verbose 1 "Installing supplied packages"
+		mkdir "$TARGET/chroot/install"
+		mount -o bind "$TARGET/install" "$TARGET/chroot/install"
+		chroot "$TARGET/chroot" dpkg --recursive --install /install
+		result=$?
+		umount "$TARGET/chroot/install"
+		rmdir "$TARGET/chroot/install"
+		case $result in
+		0)	;;
+		1)	chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
+			test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
+			;;
+		2)	;;
+		*)	show_error "Failed to install additional packages ($result)"
+			exit $result
+			;;
+		esac
+	fi
+}
+
+function install_kernel {
+	if [ -n "$UIC_KERNEL" ]; then
+		show_verbose 1 "Installing kernel..."
+		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_KERNEL
+		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_KERNEL
+	fi
 }
