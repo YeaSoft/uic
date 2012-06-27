@@ -61,9 +61,9 @@ EOF
 function list_templates {
 	CONTENT=$(mktemp)
 	if download_archive $1 $CONTENT; then
-		if [ $(grep -c "href=\"$2\(.*\).manifest\"" $CONTENT) -gt 0 ]; then
+		if [ $(grep -c "href=\"${2-.*}\\.manifest\"" $CONTENT) -gt 0 ]; then
 			show_verbose 1 "The following templates are stored on $1:"
-			grep -o "href=\"$2\(.*\).manifest\"" $CONTENT | sed -e "s/href=\"//g" -e "s/.manifest\"//g" | sort
+			grep -o "href=\"${2-.*}\\.manifest\"" $CONTENT | sed -e "s/href=\"//g" -e "s/.manifest\"//g" | sort
 		else
 			show_verbose 1 "There are no templates stored on $1"
 		fi
