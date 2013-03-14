@@ -3,7 +3,7 @@ Upstream-Name: uic
 Source: <http://www.yeasoft.com>
 
 Files: *
-Copyright: 2012 Leo Moll <leo.moll@yeasoft.com>
+Copyright: 2012-2013 Leo Moll <leo.moll@yeasoft.com>
 License: GPL-2+
  This package was debianized by Leo Moll <leo.moll@yeasoft.com> on
  Fri, 30 Mar 2012 19:09:45 +0200.

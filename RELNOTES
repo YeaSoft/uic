@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.14    2012-05-23
+Release Notes - uic - Ubuntu Installation Creator - Version 0.15    2013-03-14
 ==============================================================================
 
 * Release Scope
@@ -12,11 +12,37 @@ Release Scope
 -------------
 This release provides consolidations based on the experiences collected during
 the development of the Alix Software Project by using UIC as an installation
-tool.
+tool. Since the release date for Debian Wheezy will probably come soon, uic
+will support also installations based on Debian Wheezy.
 
 
 What's new
 ----------
+
+  * Feature: added support for debian 7 (wheezy)
+  * Feature: new command uic install permits the direct installation of
+    packages into the installation environment
+  * Fix: PPA can now also be installed if the certificate of the launchpad
+    site cannot be verified
+  * Feature: uic prepare has been renamed to uic get since this name
+    describes better the function from the user's point of view
+  * Feature: new function of uic get to list all templates available
+    on the repositories
+
+Known Problems
+--------------
+
+ * During the execution of uic_create and uic_upgrade it may still happen that
+   some process is started in the chroot preventing the special filesystems to
+   be unmounted. This happens sometime with NetPoldo 10.04 and is fixed by a
+   workaround stopping all possibly affected services in the hook script
+   'chroot_post_installation'
+
+
+Release History
+---------------
+
+Version 0.14 released on 2012-05-23
 
  * Fix: dpkg unattended setup/update was not working for older ubuntu
    versions
@@ -31,19 +57,6 @@ What's new
  * Fix: verbosity of apt is now dependant upon the uic verbosity level
  * Fix: compatibility checking prevents running uic on unsupported platforms
    or with templates with targets not compatible with the hosting system
-
-Known Problems
---------------
-
- * During the execution of uic_create and uic_upgrade it may still happen that
-   some process is started in the chroot preventing the special filesystems to
-   be unmounted. This happens sometime with NetPoldo 10.04 and is fixed by a
-   workaround stopping all possibly affected services in the hook script
-   'chroot_post_installation'
-
-
-Release History
----------------
 
 Version 0.13 released on 2012-05-22
 

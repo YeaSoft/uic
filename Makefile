@@ -42,6 +42,6 @@ uninstall:
 	rm -f $(DESTDIR)/usr/bin/uic_install
 	rm -f $(DESTDIR)/usr/bin/uic_create
 #	rm -f $(DESTDIR)/usr/bin/uic_update
-	rm -f $(DESTDIR)/usr/bin/uic_prepare
+#	rm -f $(DESTDIR)/usr/bin/uic_prepare
 	rm -f $(DESTDIR)/usr/bin/uic_get
 	rm -f $(DESTDIR)/usr/bin/uic
