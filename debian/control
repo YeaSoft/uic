@@ -4,8 +4,8 @@ Priority: extra
 Maintainer: Leo Moll <leo.moll@yeasoft.com>
 Build-Depends: debhelper (>= 7.0.50)
 Standards-Version: 3.9.2
-Homepage: http://www.yeasoft.com
-Vcs-Git: git://git.yeasoft.net/allgit/repos/uic.git
+Homepage: http://www.yeasoft.com/site/projects:uic
+Vcs-Git: https://github.com/YeaSoft/uic.git
 
 Package: uic
 Architecture: all
