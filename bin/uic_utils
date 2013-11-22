@@ -629,15 +629,12 @@ function init_apt_proxy() {
 	if [ -z "${UIC_APTPROXY}" ]; then
 		return 0
 	fi
-	if [ -f "$TARGET/chroot/etc/apt/sources.list" ]; then
-		mv "$TARGET/chroot/etc/apt/sources.list" "$TARGET/chroot/etc/apt/sources.list.BACKUP"
-		sed -e "s/http:\/\/[^\/]*/http:\/\/${UIC_APTPROXY}/g" < "$TARGET/chroot/etc/apt/sources.list.BACKUP" > "$TARGET/chroot/etc/apt/sources.list"
-	fi
+	echo -e "Acquire::http { Proxy \"http://${UIC_APTPROXY}\"; };" > "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy"
 }
 
 function exit_apt_proxy() {
-	if [ -f "$TARGET/chroot/etc/apt/sources.list.BACKUP" ]; then
-		mv "$TARGET/chroot/etc/apt/sources.list.BACKUP" "$TARGET/chroot/etc/apt/sources.list"
+	if [ -f "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy" ]; then
+		rm -f "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy"
 	fi
 }
 
