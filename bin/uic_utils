@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# (c) 2012-2013 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20130303
-# function collection for the ubuntu installation system
+# VERSION 20140502
+# function collection for the unified installation system
 
 #####################
 # Internal Variables
@@ -126,7 +126,7 @@ function disable_policy() {
 }
 
 function enable_dpkg_options() {
-	# this method does not work with older versions
+	# this method does not work with older versions of dpkg
 	# mkdir -p "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d"
 	# echo "# automatically added by uic - will be deleted at end of operation" > "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
 	# echo "force-confdef" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
@@ -140,7 +140,7 @@ function enable_dpkg_options() {
 }
 
 function disable_dpkg_options() {
-	# this method does not work with older versions
+	# this method does not work with older versions of dpkg
 	# [ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts" ] && rm "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
 	# alternative method
 	[ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" ] && mv "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
@@ -168,7 +168,7 @@ function test_mountinuse() {
 	if grep "${TARGET}/chroot/" /proc/mounts; then
 		show_error "WARNING: There are active mounts in the installation environment probably"
 		show_error "         because of an active preparation session. The execution will be"
-		show_error "         terminated in order to prevent damage to the instllation environment"
+		show_error "         terminated in order to prevent damage to the installation environment"
 		exit 5
 	fi
 }
@@ -355,59 +355,9 @@ function test_distributor_compatibility() {
 }
 
 function test_release_compatibility() {
-	if ! which lsb_release > /dev/null; then
-		# no lsb_release on this platform
-		return 3;
+	if [ -f "/usr/share/debootstrap/scripts/${UIC_RELEASE}" ]; then
+		return 0
 	fi
-	MY_RELEASE=$(lsb_release -cs)
-	case "${MY_RELEASE}" in
-	"wheezy")	case "${UIC_RELEASE}" in
-			"wheezy")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	"squeeze")	case "${UIC_RELEASE}" in
-			"squeeze")	return 0;;
-			esac;;
-	"hardy")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			esac;;
-	"lucid")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			"lucid")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	"maverick")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			"lucid")	return 0;;
-			"maverick")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	"natty")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			"lucid")	return 0;;
-			"maverick")	return 0;;
-			"natty")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	"oneiric")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			"lucid")	return 0;;
-			"maverick")	return 0;;
-			"natty")	return 0;;
-			"oneiric")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	"precise")	case "${UIC_RELEASE}" in
-			"hardy")	return 0;;
-			"lucid")	return 0;;
-			"maverick")	return 0;;
-			"natty")	return 0;;
-			"oneiric")	return 0;;
-			"precise")	return 0;;
-			"wheezy")	return 0;;
-			"squeeze")	return 0;;
-			esac;;
-	esac
 	return 3
 }
 
