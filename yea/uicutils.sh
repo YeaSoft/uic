@@ -9,7 +9,7 @@
 # Internal Variables
 # generic script helpers
 SCRIPTNAME=$(basename $0)
-SCRIPTPATH=$(expr match "$0" '\(.*\)'\/$SCRIPTNAME)
+SCRIPTPATH=$(expr match "$0" '\(.*\)'\/${SCRIPTNAME})
 VERBOSE=0
 # uic specific
 VERSION='@VERSION@'
@@ -42,21 +42,21 @@ UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
 # generic script helpers
 
 function show_name {
-	echo "$SCRIPTNAME, version $VERSION"
+	echo "${SCRIPTNAME}, version ${VERSION}"
 }
 
 function show_verbose {
-	if [ $VERBOSE -ge $1 ]; then
-		echo "$SCRIPTNAME: ${*:2}"
+	if [ ${VERBOSE} -ge $1 ]; then
+		echo "${SCRIPTNAME}: ${*:2}"
 	fi
 }
 
 function show_warning {
-	echo "$SCRIPTNAME warning: $*" >&2
+	echo "${SCRIPTNAME} warning: $*" >&2
 }
 
 function show_error {
-	echo "$SCRIPTNAME error: $*" >&2
+	echo "${SCRIPTNAME} error: $*" >&2
 }
 
 function test_exec {
@@ -100,7 +100,7 @@ function cleanup_script() {
 
 
 function chroot_init() {
-	if [ $SPECIALFSMOUNT -lt 1 ]; then
+	if [ ${SPECIALFSMOUNT} -lt 1 ]; then
 		show_verbose 1 "Mounting special file systems in environment..."
 		mount_special
 		enable_policy
@@ -110,7 +110,7 @@ function chroot_init() {
 }
 
 function mount_special() {
-	for MOUNT_POINT in $SPECIALFSM; do
+	for MOUNT_POINT in ${SPECIALFSM}; do
 		if ! grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
 			mount -o bind ${MOUNT_POINT} ${TARGET}/chroot${MOUNT_POINT}
 		fi
@@ -148,7 +148,7 @@ function disable_dpkg_options() {
 }
 
 function umount_special() {
-	for MOUNT_POINT in $SPECIALFSU; do
+	for MOUNT_POINT in ${SPECIALFSU}; do
 		if grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
 			umount ${TARGET}/chroot${MOUNT_POINT}
 		fi
@@ -156,7 +156,7 @@ function umount_special() {
 }
 
 function chroot_exit() {
-	if [ $SPECIALFSMOUNT -gt 0 ]; then
+	if [ ${SPECIALFSMOUNT} -gt 0 ]; then
 		show_verbose 1 "Unmounting special file systems in environment..."
 		disable_dpkg_options
 		disable_policy
@@ -487,7 +487,7 @@ function call_chroot_hook() {
 		show_verbose 2 "Copying chroot hook $1 into the installation environment..."
 		cp "${TARGET}/hooks/$1" "${TARGET}/chroot/tmp"
 		show_verbose 2 "Executing hook $1..."
-		chroot "$TARGET/chroot" "/tmp/$1"
+		chroot "${TARGET}/chroot" "/tmp/$1"
 		test_exec $1
 		show_verbose 2 "Removing chroot hook $1 from the installation environment..."
 		rm "${TARGET}/chroot/tmp/$1"
@@ -495,76 +495,95 @@ function call_chroot_hook() {
 }
 
 function apply_customizations() {
-	if [ -z "$1" ]; then
-		CUST_SUBDIR="files"
-	else
-		CUST_SUBDIR="$1"
-	fi
+	CUST_SUBDIR=${1:-files}
+	KEYS_SUBDIR=${2:-install}
 	show_verbose 1 "Applying customizations to the target installation environment..."
 	call_hook pre_customization
 	call_chroot_hook chroot_pre_customization
-	cp -a "$TARGET/$CUST_SUBDIR/." "$TARGET/chroot/"
-	if [ -f "${TARGET}/$CUST_SUBDIR.remove" ]; then
-		show_verbose 2 "Processing file deletion list $CUST_SUBDIR.remove"
-		xargs -r -a "${TARGET}/$CUST_SUBDIR.remove" chroot "$TARGET/chroot" rm -rf
+	# install files delivered with the template
+	show_verbose 2 "Installing custom files from '${CUST_SUBDIR}'"
+	cp -a "${TARGET}/${CUST_SUBDIR}/." "${TARGET}/chroot/"
+	# remove files as requested by the template
+	if [ -f "${TARGET}/${CUST_SUBDIR}.remove" ]; then
+		show_verbose 2 "Processing file deletion list ${CUST_SUBDIR}.remove"
+		xargs -r -a "${TARGET}/${CUST_SUBDIR}.remove" chroot "${TARGET}/chroot" rm -rf
 	fi
+	# make sure the essential files are existing
 	create_minimal_files
+	# install trusted keys from the template, if provided
+	if [ -d "${TARGET}/${KEYS_SUBDIR}" ]; then
+		show_verbose 2 "Installing supplied signing keys from '${KEYS_SUBDIR}'"
+		mkdir -p "${TARGET}/chroot/aptkeys"
+		mount -o bind "${TARGET}/${KEYS_SUBDIR}" "${TARGET}/chroot/aptkeys"
+		for KEYFILE in $(find "${TARGET}/${KEYS_SUBDIR}" -name '*.key' -printf " %f"); do
+			chroot "${TARGET}/chroot" apt-key add /aptkeys/${KEYFILE}
+			RESULT=$?
+			if [ ${RESULT} -ne 0 ]; then
+				umount "${TARGET}/chroot/aptkeys"
+				rmdir "${TARGET}/chroot/aptkeys"
+				show_error "Failed to install supplied signing key ${KEYFILE}"
+				exit ${RESULT}
+			fi
+		done
+		umount "${TARGET}/chroot/aptkeys"
+		rmdir "${TARGET}/chroot/aptkeys"
+	fi
 	call_chroot_hook chroot_post_customization
 	call_hook post_customization
 }
 
 function process_locales() {
 	show_verbose 1 "(Re)initalizing system locales..."
-	if [ $(grep -s -i ubuntu "$TARGET/chroot/etc/lsb-release" | wc -l) != "0" ]; then
+	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
 		# ubuntu
-		chroot "$TARGET/chroot" dpkg-reconfigure locales
-		test_exec chroot chroot $TARGET/chroot dpkg-reconfigure locales
+		chroot "${TARGET}/chroot" dpkg-reconfigure locales
+		test_exec chroot chroot ${TARGET}/chroot dpkg-reconfigure locales
 	else
-		if ! chroot "$TARGET/chroot" which locale-gen > /dev/null; then
+		if ! chroot "${TARGET}/chroot" which locale-gen > /dev/null; then
 			init_apt_proxy
-			chroot "$TARGET/chroot" apt-get install locales
+			chroot "${TARGET}/chroot" apt-get install locales
 			test_exec apt-get apt-get install locales
 			exit_apt_proxy
 		fi
-		chroot "$TARGET/chroot" locale-gen
+		chroot "${TARGET}/chroot" locale-gen
 		test_exec locale-gen
 	fi
 }
 
 function create_minimal_files() {
 	# locale
-	if [ $(grep -s -i ubuntu "$TARGET/chroot/etc/lsb-release" | wc -l) != "0" ]; then
+	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
 		# ubuntu
-		if [ ! -f "$TARGET/chroot/var/lib/locales/supported.d/local" ]; then
-			echo -e "en_US.UTF-8 UTF-8" > "$TARGET/chroot/var/lib/locales/supported.d/local"
+		if [ ! -f "${TARGET}/chroot/var/lib/locales/supported.d/local" ]; then
+			echo -e "en_US.UTF-8 UTF-8" > "${TARGET}/chroot/var/lib/locales/supported.d/local"
 		fi
 	else
-		if [ ! -f "$TARGET/chroot/etc/locale.gen" ]; then
-			echo -e "en_US.UTF-8 UTF-8" > "$TARGET/chroot/etc/locale.gen"
+		if [ ! -f "${TARGET}/chroot/etc/locale.gen" ]; then
+			echo -e "en_US.UTF-8 UTF-8" > "${TARGET}/chroot/etc/locale.gen"
 		fi
-		if [ ! -f "$TARGET/chroot/etc/default/locale" ]; then
-			echo "#  File generated by update-locale" > "$TARGET/chroot/etc/default/locale"
-			echo "LANG=\"en_US.UTF-8\"" >> "$TARGET/chroot/etc/default/locale"
-			echo "LANGUAGE=\"en_US:en\"" >> "$TARGET/chroot/etc/default/locale"
+		if [ ! -f "${TARGET}/chroot/etc/default/locale" ]; then
+			echo "#  File generated by update-locale" > "${TARGET}/chroot/etc/default/locale"
+			echo "LANG=\"en_US.UTF-8\"" >> "${TARGET}/chroot/etc/default/locale"
+			echo "LANGUAGE=\"en_US:en\"" >> "${TARGET}/chroot/etc/default/locale"
 		fi
 	fi
 	# hostname
-	if [ ! -f "$TARGET/chroot/etc/hostname" ]; then
-		echo $UIC_SRCNAME > "$TARGET/chroot/etc/hostname"
+	if [ ! -f "${TARGET}/chroot/etc/hostname" ]; then
+		echo $UIC_SRCNAME > "${TARGET}/chroot/etc/hostname"
 	fi
 	# dns resolution
-	if [ ! -f "$TARGET/chroot/etc/resolv.conf" ]; then
-		echo -e "nameserver 208.67.222.222\nnameserver 208.67.220.220" > "$TARGET/chroot/etc/resolv.conf"
+	if [ ! -f "${TARGET}/chroot/etc/resolv.conf" ]; then
+		echo -e "nameserver 208.67.222.222\nnameserver 208.67.220.220" > "${TARGET}/chroot/etc/resolv.conf"
 	fi
 	# file system table
-	if [ ! -f "$TARGET/chroot/etc/fstab" ]; then
-		echo -e "# /etc/fstab: static file system information." > "$TARGET/chroot/etc/fstab"
-		echo -e "#" >> "$TARGET/chroot/etc/fstab"
-		echo -e "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>" >> "$TARGET/chroot/etc/fstab"
-		echo -e "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
-		echo -e "" >> "$TARGET/chroot/etc/fstab"
-		echo -e "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
-		echo -e "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0" >> "$TARGET/chroot/etc/fstab"
+	if [ ! -f "${TARGET}/chroot/etc/fstab" ]; then
+		echo -e "# /etc/fstab: static file system information." > "${TARGET}/chroot/etc/fstab"
+		echo -e "#" >> "${TARGET}/chroot/etc/fstab"
+		echo -e "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>" >> "${TARGET}/chroot/etc/fstab"
+		echo -e "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
+		echo -e "" >> "${TARGET}/chroot/etc/fstab"
+		echo -e "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
+		echo -e "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
 	fi
 }
 
@@ -580,12 +599,12 @@ function init_apt_proxy() {
 	if [ -z "${UIC_APTPROXY}" ]; then
 		return 0
 	fi
-	echo -e "Acquire::http { Proxy \"http://${UIC_APTPROXY}\"; };" > "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy"
+	echo -e "Acquire::http { Proxy \"http://${UIC_APTPROXY}\"; };" > "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy"
 }
 
 function exit_apt_proxy() {
-	if [ -f "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy" ]; then
-		rm -f "$TARGET/chroot/etc/apt/apt.conf.d/02uicproxy"
+	if [ -f "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy" ]; then
+		rm -f "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy"
 	fi
 }
 
@@ -631,7 +650,7 @@ function add_ppa() {
 	fi
 
 	# now add the signing key to the APT keyring
-	chroot "$TARGET/chroot" apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $PPA_FINGERPRINT
+	chroot "${TARGET}/chroot" apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $PPA_FINGERPRINT
 	test_exec apt-key apt-key adv --keyserver keyserver.ubuntu.com --recv-keys $PPA_FINGERPRINT
 
 	# now create the ppa entries
@@ -644,14 +663,14 @@ function add_ppa() {
 
 function update_sources {
 	show_verbose 1 "Updating package sources..."
-	chroot "$TARGET/chroot" apt-get ${QUIET} update
+	chroot "${TARGET}/chroot" apt-get ${QUIET} update
 	test_exec chroot apt-get ${QUIET} update
 }
 
 function update_system {
 	show_verbose 1 "Updating system..."
-	chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
-	test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
+	chroot ${TARGET}/chroot apt-get ${QUIET} -y upgrade
+	test_exec chroot "${TARGET}/chroot" apt-get ${QUIET} -y upgrade
 }
 
 function install_ppas {
@@ -666,57 +685,37 @@ function install_ppas {
 function install_software {
 	if [ -n "$UIC_SOFTWARE" ]; then
 		show_verbose 1 "Installing software..."
-		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
-		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
-	fi
-}
-
-function install_trusted_keys {
-	if [ -d "$TARGET/install" ]; then
-		show_verbose 1 "Installing supplied signing keys"
-		mkdir -p "$TARGET/chroot/install"
-		mount -o bind "$TARGET/install" "$TARGET/chroot/install"
-		for KEYFILE in $(find install -name '*.akey' -printf " %f"); do
-			chroot "$TARGET/chroot" apt-key add /install/${KEYFILE}
-			result=$?
-			if [ $result -ne 0 ]; then
-				umount "$TARGET/chroot/install"
-				rmdir "$TARGET/chroot/install"
-				show_error "Failed to install supplied signing key ${KEYFILE}"
-				exit $result
-			fi
-		done
-		umount "$TARGET/chroot/install"
-		rmdir "$TARGET/chroot/install"
+		chroot "${TARGET}/chroot" apt-get ${QUIET} -y install $UIC_SOFTWARE
+		test_exec chroot ${TARGET}/chroot apt-get ${QUIET} -y install $UIC_SOFTWARE
 	fi
 }
 
 function install_packages {
-	if [ -d "$TARGET/install" ]; then
+	if [ -d "${TARGET}/install" ]; then
 		show_verbose 1 "Installing supplied packages"
-		mkdir -p "$TARGET/chroot/install"
-		mount -o bind "$TARGET/install" "$TARGET/chroot/install"
-		chroot "$TARGET/chroot" dpkg --recursive --install /install
-		result=$?
-		umount "$TARGET/chroot/install"
-		rmdir "$TARGET/chroot/install"
-		case $result in
+		mkdir -p "${TARGET}/chroot/install"
+		mount -o bind "${TARGET}/install" "${TARGET}/chroot/install"
+		chroot "${TARGET}/chroot" dpkg --recursive --install /install
+		RESULT=$?
+		umount "${TARGET}/chroot/install"
+		rmdir "${TARGET}/chroot/install"
+		case ${RESULT} in
 		0)	;;
-		1)	chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
-			test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y -f install
+		1)	chroot "${TARGET}/chroot" apt-get ${QUIET} -y -f install
+			test_exec chroot "${TARGET}/chroot" apt-get ${QUIET} -y -f install
 			;;
 		2)	;;
 		*)	show_error "Failed to install additional packages ($result)"
-			exit $result
+			exit ${RESULT}
 			;;
 		esac
 	fi
 }
 
 function install_kernel {
-	if [ -n "$UIC_KERNEL" ]; then
+	if [ -n "${UIC_KERNEL}" ]; then
 		show_verbose 1 "Installing kernel..."
-		chroot "$TARGET/chroot" apt-get ${QUIET} -y install $UIC_KERNEL
-		test_exec chroot $TARGET/chroot apt-get ${QUIET} -y install $UIC_KERNEL
+		chroot "${TARGET}/chroot" apt-get ${QUIET} -y install ${UIC_KERNEL}
+		test_exec chroot ${TARGET}/chroot apt-get ${QUIET} -y install ${UIC_KERNEL}
 	fi
 }
