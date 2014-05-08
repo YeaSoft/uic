@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120627
-# This script prepares the environment for an Ubuntu installation
+# Version 20140508
+# This script prepares the environment for a unified installation
 
 #####################################
 # script initialization
@@ -19,6 +19,7 @@ source uic_utils
 
 # initialize runtime variables
 FORCE=0
+ENTER=0
 LISTEMPLATES=0
 SHOWVERSIONS=0
 ENVNAME=
@@ -33,17 +34,18 @@ TMPARCHIVE=
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvFls] [-n <name>] <template archive> [<destination path>]
+usage: $SCRIPTNAME [-hvFlse] [-n <name>] <template archive> [<destination path>]
 
 Options:
  -s, --show           show the available versions of the requested template
  -l, --list           list all available templtes on the repository
  -n, --name           use an alternative name for the installation environment
+ -e, --enter          change directory into the installation environment
  -F, --force          force deletion of existing installation environment
  -v, --verbose        increase verbosity
 (-h) --help           show this help (-h works with no other options)
 
-This script prepares the environment for an Ubuntu installation
+This script prepares the environment for a unified installation
 
 <source archive> can be:
  - the base name of an installation environment (e.g.: netpoldo-1004-32)
@@ -118,6 +120,7 @@ while true; do
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-F|--force)                     FORCE=1; shift;;
+	-e|--enter)			ENTER=1; shift;;
 	-n|--name)			ENVNAME="$2"; shift 2;;
 	-s|--show)			SHOWVERSIONS=1; shift;;
 	-l|--list)			LISTEMPLATES=1; shift;;
@@ -258,3 +261,8 @@ mv "${TMPDESTINATION}/${UICPATH}" "${DESTPATH}/${ENVNAME}"
 [ -n "${TMPARCHIVE}"     -a -f "${TMPARCHIVE}" ]     && rm "${TMPARCHIVE}"
 
 show_verbose 1 "Destination environment ${ENVNAME} successfully created."
+
+if [ ${ENTER} -gt 0 ]; then
+	show_verbose 1 "Changing directory to environment ${ENVNAME}"
+	cd "${DESTPATH}/${ENVNAME}"
+fi
