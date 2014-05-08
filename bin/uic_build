@@ -1,15 +1,16 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120511
-# This script produces the deliverables of an Ubuntu installation environment
+# Version 20140508
+# This script produces the deliverables of a
+# unified installation environment
 
 #####################################
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
@@ -29,7 +30,7 @@ VBPARAM=""
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvlC] [-b <number>[,<number>]..] [<environment name>]
+usage: ${SCRIPTNAME} [-hvlC] [-b <number>[,<number>]..] [<environment name>]
 
 Options:
  -b, --build-target <number>  builds only the build targets with index numbers
@@ -39,7 +40,7 @@ Options:
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script produces the deliverables of an Ubuntu installation environment
+This script produces the deliverables of a unified installation environment
 
 <environment name> can be omitted if the command is launched from within the
 environment directory. Otherwise it can be:
@@ -53,16 +54,16 @@ EOF
 
 function list_targets {
 	if [ ${#UIC_TARGET[@]} -eq 0 ]; then
-		echo "There are no build targets defined for $TARGETNAME"
+		echo "There are no build targets defined for ${TARGETNAME}"
 		return 0
 	fi
 
-	echo "The following build targets are defined for $TARGETNAME:"
+	echo "The following build targets are defined for ${TARGETNAME}:"
 	echo
 	echo "Index    Build Target"
 	echo "-------------------------------------------------------"
 	for target_index in $(seq 0 $((${#UIC_TARGET[@]} - 1))); do
-		printf "%-5i    %s\n" $target_index "${UIC_TARGET[$target_index]}"
+		printf "%-5i    %s\n" ${target_index} "${UIC_TARGET[${target_index}]}"
 	done
 	return 0
 }
@@ -72,7 +73,7 @@ function build_target {
 	UIC_BUILDNAME=${1#${UIC_BUILDTYPE}:}
 	shift
 	[ -d "${TARGET}/output" ] || mkdir -p "${TARGET}/output"
-	case "$UIC_BUILDTYPE" in
+	case "${UIC_BUILDTYPE}" in
 	"none")		;;
 	"kernel")	build_target_kernel $@;;
 	"initrd")	build_target_initrd $@;;
@@ -80,11 +81,11 @@ function build_target {
 	"install")	build_target_install $@;;
 	"report")	build_target_report $@;;
 	"archive")	build_target_archive $@;;
-	*)		if [ -x "$TARGET/build/build_target_$UIC_BUILDTYPE" ]; then
-				show_verbose 2 "Calling custom buildscript build_target_$UIC_BUILDTYPE..."
-				source "$TARGET/build/build_target_$UIC_BUILDTYPE"
+	*)		if [ -x "${TARGET}/build/build_target_${UIC_BUILDTYPE}" ]; then
+				show_verbose 2 "Calling custom buildscript build_target_${UIC_BUILDTYPE}..."
+				source "${TARGET}/build/build_target_${UIC_BUILDTYPE}"
 			else
-				show_error "Build type $UIC_BUILDTYPE unknown"
+				show_error "Build type ${UIC_BUILDTYPE} unknown"
 				exit 2
 			fi
 			;;
@@ -99,7 +100,7 @@ function build_target_TEMPLATE {
 	# parse parameters
 	PARSER=$(getopt --name build_target_TEMPLATE --options o: --longoptions output: -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -130,7 +131,7 @@ function build_target_archive {
 	# parse parameters
 	PARSER=$(getopt --name build_target_archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while [ $# -gt 0 ]; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -182,7 +183,7 @@ function build_target_report {
 	# parse parameters
 	PARSER=$(getopt --name build_target_report --options o:,t --longoptions output:,terse -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -216,7 +217,7 @@ function build_target_install {
 	# parse parameters
 	PARSER=$(getopt --name build_target_install --options o: --longoptions output: -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTPATH="${2}"
@@ -241,7 +242,7 @@ function build_target_install {
 	call_chroot_hook chroot_pre_build_install
 
 	show_verbose 1 "Installing ${TARGETNAME} to ${UIC_OUTPUTPATH}..."
-	cp -a $VBPARAM "${TARGET}/output/." "${UIC_OUTPUTPATH}/"
+	cp -a ${VBPARAM} "${TARGET}/output/." "${UIC_OUTPUTPATH}/"
 
 	call_chroot_hook chroot_post_build_install
 	call_hook post_build_install
@@ -253,7 +254,7 @@ function build_target_kernel {
 	# parse parameters
 	PARSER=$(getopt --name build_target_kernel --options o: --longoptions output: -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -274,7 +275,7 @@ function build_target_kernel {
 		exit 2
 	fi
 	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
-	cp $VBPARAM "${TARGET}/chroot/vmlinuz" "${TARGET}/output/${UIC_OUTPUTFILE}"
+	cp ${VBPARAM} "${TARGET}/chroot/vmlinuz" "${TARGET}/output/${UIC_OUTPUTFILE}"
 
 	call_chroot_hook chroot_post_build_kernel
 	call_hook post_build_kernel
@@ -287,7 +288,7 @@ function build_target_initrd {
 	# parse parameters
 	PARSER=$(getopt --name build_target_initrd --options o:,c: --longoptions output:,config: -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -311,9 +312,9 @@ function build_target_initrd {
 	cleanup_environment
 
 	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
-	[ -f "${UIC_CONFIGFILE}" ] && cp "${UIC_CONFIGFILE}" "${TARGET}/chroot/etc/initramfs-tools/initramfs.conf"
+	[ -f "${UIC_CONFIGFILE}" ] && cp ${VBPARAM} "${UIC_CONFIGFILE}" "${TARGET}/chroot/etc/initramfs-tools/initramfs.conf"
 	chroot "${TARGET}/chroot" /usr/sbin/update-initramfs -u -k all
-	cp  "${TARGET}/chroot/initrd.img" "${TARGET}/output/${UIC_OUTPUTFILE}"
+	cp  ${VBPARAM} "${TARGET}/chroot/initrd.img" "${TARGET}/output/${UIC_OUTPUTFILE}"
 
 	call_chroot_hook chroot_post_build_initrd
 	call_hook post_build_initrd
@@ -326,7 +327,7 @@ function build_target_squashfs {
 	# parse parameters
 	PARSER=$(getopt --name build_target_squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
 	test_getopt
-	eval set -- "$PARSER"
+	eval set -- "${PARSER}"
 	while true; do
 		case "$1" in
 		-o|--output)	UIC_OUTPUTFILE="${2}"
@@ -357,7 +358,7 @@ function build_target_squashfs {
 	show_verbose 1 "Preparing root filesystem..."
 	mkdir -p "${TARGET}/chroot/root/squash/fs"
 	mkdir -p "${TARGET}/chroot/root/squash/out"
-	[ -f ${UIC_EXCLUDEFILE} ] && cp ${UIC_EXCLUDEFILE} "${TARGET}/chroot/root/squash/exclude"
+	[ -f ${UIC_EXCLUDEFILE} ] && cp ${VBPARAM} ${UIC_EXCLUDEFILE} "${TARGET}/chroot/root/squash/exclude"
 	[ -f ${UIC_EXCLUDEFILE} ] || touch "${TARGET}/chroot/root/squash/exclude"
 	echo "root/squash" >> "${TARGET}/chroot/root/squash/exclude"
 	mount -o bind "${TARGET}/chroot" "${TARGET}/chroot/root/squash/fs"
@@ -379,9 +380,9 @@ function build_target_squashfs {
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,l,C,b: --longoptions help,verbose,list,skip-customization,build-target: -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,l,C,b: --longoptions help,verbose,list,skip-customization,build-target: -- "$@")
 test_getopt
-eval set -- "$PARSER"
+eval set -- "${PARSER}"
 while true; do
 	case "$1" in
 	-h|--help)			show_name; echo; usage; exit 1;;
@@ -390,12 +391,12 @@ while true; do
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
 	-b|--build-target)		BUILD_TARGETS="$(echo "$2" | tr , " ")"; shift 2;;
 	--)				shift; break;;
-        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
 # configuration checking
-case "$VERBOSE" in
+case "${VERBOSE}" in
 0)	;;
 1)	show_name;;
 *)	VBPARAM="-v"; show_name;;
@@ -414,7 +415,7 @@ source "$TARGET/uictpl.conf"
 [ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
 test_environment_configuration
 
-if [ $LIST_TARGETS -gt 0 ]; then
+if [ ${LIST_TARGETS} -gt 0 ]; then
 	list_targets
 	exit $?
 fi
@@ -433,24 +434,24 @@ show_verbose 2 "Preparing chroot special filesystems..."
 init_script
 chroot_init
 
-if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+if [ ${SKIP_CUSTOMIZATION} -eq 0 ]; then
 	apply_customizations
 fi
 
 call_hook pre_build
 call_chroot_hook chroot_pre_build
 
-if [ -n "$BUILD_TARGETS" ]; then
-	for BUILD_TARGET in $BUILD_TARGETS; do
-		if [ $(expr match "$BUILD_TARGET" "[0-9]*") -ne ${#BUILD_TARGET} ]; then
+if [ -n "${BUILD_TARGETS}" ]; then
+	for BUILD_TARGET in ${BUILD_TARGETS}; do
+		if [ $(expr match "${BUILD_TARGET}" "[0-9]*") -ne ${#BUILD_TARGET} ]; then
 			show_error "non numeric build target index specified. use uic build --list to view valid build targets indices"
 			exit 1
 		fi
 	done
-	for BUILD_TARGET in $BUILD_TARGETS; do
-		if [ $BUILD_TARGET -ge 0 -a $BUILD_TARGET -lt ${#UIC_TARGET[@]} ]; then
-			show_verbose 2 "Building specific target $BUILD_TARGET..."
-			build_target ${UIC_TARGET[$BUILD_TARGET]}
+	for BUILD_TARGET in ${BUILD_TARGETS}; do
+		if [ ${BUILD_TARGET} -ge 0 -a ${BUILD_TARGET} -lt ${#UIC_TARGET[@]} ]; then
+			show_verbose 2 "Building specific target ${BUILD_TARGET}..."
+			build_target ${UIC_TARGET[${BUILD_TARGET}]}
 		else
 			show_error "invalid build target index specified. use uic build --list to view valid build targets indices"
 			exit 1
@@ -459,8 +460,8 @@ if [ -n "$BUILD_TARGETS" ]; then
 else
 	show_verbose 2 "Building all targets..."
 	for target_index in $(seq 0 $((${#UIC_TARGET[@]} - 1))); do
-		show_verbose 2 "Building target $target_index..."
-		build_target ${UIC_TARGET[$target_index]}
+		show_verbose 2 "Building target ${target_index}..."
+		build_target ${UIC_TARGET[${target_index}]}
 	done
 fi
 

@@ -9,7 +9,7 @@
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf

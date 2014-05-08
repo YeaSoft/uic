@@ -1,15 +1,16 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120331
-# This script enters as chroot into an Ubuntu installation environment
+# Version 20140508
+# This script enters as chroot into a
+# unified installation environment
 
 #####################################
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
@@ -25,7 +26,7 @@ FORCE=0
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hv] [<environment name>]
+usage: ${SCRIPTNAME} [-hv] [<environment name>]
 
 Options:
  -v, --verbose                increase verbosity
@@ -33,11 +34,11 @@ Options:
 
 This script enters as chroot into an Ubuntu installation environment
 
-<environment name> can be omitted if the command is launched from within the environment
-directory. Otherwise it can be:
+<environment name> can be omitted if the command is launched from within the
+environment directory. Otherwise it can be:
 
-- an absolute path to the intended environment directory (e.g.: /home/leo/netpoldo-1004-32)
-- a path to the intended environment directory relative to the current directory
+- an absolute path to the intended environment directory (e.g.: /home/kp/alix)
+- a path to the intended environment directory relative to the current dir
 - a path to the intended environment directory relative to /usr/src
 
 EOF
@@ -47,20 +48,20 @@ EOF
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v --longoptions help,verbose -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v --longoptions help,verbose -- "$@")
 test_getopt
-eval set -- "$PARSER"
+eval set -- "${PARSER}"
 while true; do
 	case "$1" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	--)				shift; break;;
-        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
 # configuration checking
-case "$VERBOSE" in
+case "${VERBOSE}" in
 0)	;;
 1)	show_name;;
 *)	show_name;;
@@ -81,8 +82,8 @@ test_mountinuse
 
 # load target configuration
 show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uictpl.conf"
-[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
+source "${TARGET}/uictpl.conf"
+[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
 test_environment_configuration
 
 # check builder compatibility

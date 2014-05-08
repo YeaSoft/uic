@@ -1,15 +1,15 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120522
-# This script creates an Ubuntu installation environment
+# Version 20140508
+# This script creates a unified installation environment
 
 #####################################
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
@@ -26,21 +26,20 @@ QUIET=-qq
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvF] [<environment name>]
+usage: ${SCRIPTNAME} [-hvF] [<environment name>]
 
 Options:
  -F, --force                  force deletion of existing installation
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script creates an Ubuntu installation environment
+This script creates a unified installation environment
 
 <environment name> can be omitted if the command is launched from within the
 environment directory. Otherwise it can be:
 
-- an absolute path to the intended environment directory
-  (e.g.: /home/leo/netpoldo-1004-32)
-- a path to the intended environment directory relative to the current path
+- an absolute path to the intended environment directory (e.g.: /home/kp/alix)
+- a path to the intended environment directory relative to the current dir
 - a path to the intended environment directory relative to /usr/src
 
 EOF
@@ -50,21 +49,21 @@ EOF
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F --longoptions help,verbose,force -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,F --longoptions help,verbose,force -- "$@")
 test_getopt
-eval set -- "$PARSER"
+eval set -- "${PARSER}"
 while true; do
 	case "$1" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-F|--force)                     FORCE=1; shift;;
 	--)				shift; break;;
-        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
 # configuration checking
-case "$VERBOSE" in
+case "${VERBOSE}" in
 0)	;;
 1)	QUIET=-q; show_name;;
 *)	QUIET=""; show_name;;
@@ -77,9 +76,9 @@ test_prereq
 find_environment $1
 verify_environment $1
 
-if [ -d "$TARGET/chroot" ]; then
+if [ -d "${TARGET}/chroot" ]; then
 	# test if there is already a populated installation
-	if [ $(find "$TARGET/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a $FORCE -lt 1 ]; then
+	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a ${FORCE} -lt 1 ]; then
 		show_error "Target installation environment ${TARGETNAME} is already existing. Use -F to force cleanup."
 		exit 1
 	fi
@@ -88,24 +87,24 @@ if [ -d "$TARGET/chroot" ]; then
 	test_mountinuse
 
 	# clean up installation area if needed
-	if [ $(find "$TARGET/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a $FORCE -gt 0 ]; then
+	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a ${FORCE} -gt 0 ]; then
 		show_verbose 1 "Cleaning up target installation environment ${TARGETNAME}..."
-		if [ -d "$TARGET/chroot/lost+found" ]; then
+		if [ -d "${TARGET}/chroot/lost+found" ]; then
 			show_error "Cannot clean mounted installation environment. Partition should be formatted manually."
 			exit 1
 		else
-			rm -rf "$TARGET/chroot"
-			mkdir -p "$TARGET/chroot"
+			rm -rf "${TARGET}/chroot"
+			mkdir -p "${TARGET}/chroot"
 		fi
 	fi
 else
-	mkdir -p "$TARGET/chroot"
+	mkdir -p "${TARGET}/chroot"
 fi
 
 # load target configuration
 show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uictpl.conf"
-[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
+source "${TARGET}/uictpl.conf"
+[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
 test_environment_configuration
 
 # check builder compatibility
@@ -114,11 +113,11 @@ test_builder_compatibility
 show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
 call_hook pre_debootstrap
 if [ -n "${UIC_PREINSTALL}" ]; then
-	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
 else
-	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
 fi
-test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "$TARGET/chroot" $(get_filtered_repository)
+test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
 call_hook post_debootstrap
 
 show_verbose 2 "Preparing chroot special filesystems..."
@@ -133,7 +132,7 @@ call_chroot_hook chroot_pre_installation
 if [ -n "$UIC_PPAS" ]; then
 	for elem in "$UIC_PPAS"; do
 		show_verbose 1 "Adding PPA $elem"
-		add_ppa $elem
+		add_ppa ${elem}
 	done
 fi
 
@@ -143,17 +142,17 @@ exit_apt_proxy
 
 process_locales
 
-if [ -n "$UIC_RECONFIGURE" ]; then
+if [ -n "${UIC_RECONFIGURE}" ]; then
 	show_verbose 1 "Configuring packages..."
-	for RECONF_PACKAGE in $UIC_RECONFIGURE; do
+	for RECONF_PACKAGE in ${UIC_RECONFIGURE}; do
 		RECONF_PKG=$(echo ${RECONF_PACKAGE} | cut -d: -f 1)
 		RECONF_MODE=$(echo ${RECONF_PACKAGE} | cut -d: -f 2)
 		if [ -z "${RECONF_MODE}" ]; then
-			chroot "$TARGET/chroot" dpkg-reconfigure ${RECONF_PKG}
-			test_exec chroot chroot "$TARGET/chroot" dpkg-reconfigure ${RECONF_PKG}
+			chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
+			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
 		else
-			chroot "$TARGET/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
-			test_exec chroot chroot "$TARGET/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
 		fi
 	done
 fi
@@ -176,12 +175,12 @@ case "${UIC_ROOTPASSWORD}" in
 "")	show_warning "Password will not be initialized"
 	;;
 "ask")	show_verbose 1 "Asking for root password..."
-	until chroot "$TARGET/chroot" passwd root; do
+	until chroot "${TARGET}/chroot" passwd root; do
 		show_warning "You have to specify a valid password for root"
 	done
 	;;
 *)	show_verbose 1 "Setting root password..."
-	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "$TARGET/chroot" passwd root  2> /dev/null
+	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
 	;;
 esac
 

@@ -1,15 +1,15 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120627
-# This script upgrades an Ubuntu installation environment
+# Version 20140508
+# This script upgrades a unified installation environment
 
 #####################################
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
@@ -27,22 +27,21 @@ QUIET=-qq
 
 function usage {
 	cat <<EOF
-usage: $SCRIPTNAME [-hvIC] [<environment name>]
+usage: ${SCRIPTNAME} [-hvIC] [<environment name>]
 
 Options:
  -I, --do-reinstallations     reinstall all default packages
- -C, --skip-customization     skips the installation customization
+ -C, --skip-customization     skip the installation customization
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script upgrades an Ubuntu installation environment
+This script upgrades a unified installation environment
 
 <environment name> can be omitted if the command is launched from within the
 environment directory. Otherwise it can be:
 
-- an absolute path to the intended environment directory
-  (e.g.: /home/leo/netpoldo-1004-32)
-- a path to the intended environment directory relative to the current path
+- an absolute path to the intended environment directory (e.g.: /home/kp/alix)
+- a path to the intended environment directory relative to the current dir
 - a path to the intended environment directory relative to /usr/src
 
 EOF
@@ -52,9 +51,9 @@ EOF
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,C,I --longoptions help,verbose,skip-customization,do-reinstallations -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,C,I --longoptions help,verbose,skip-customization,do-reinstallations -- "$@")
 test_getopt
-eval set -- "$PARSER"
+eval set -- "${PARSER}"
 while true; do
 	case "$1" in
 	-h|--help)			show_name; echo; usage; exit 1;;
@@ -62,12 +61,12 @@ while true; do
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
 	-I|--do-reinstallations)	DO_REINSTALLATIONS=1; shift;;
 	--)				shift; break;;
-        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
 # configuration checking
-case "$VERBOSE" in
+case "${VERBOSE}" in
 0)	;;
 1)	QUIET=-q; show_name;;
 *)	QUIET=""; show_name;;
@@ -88,8 +87,8 @@ test_mountinuse
 
 # load target configuration
 show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uictpl.conf"
-[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
+source "${TARGET}/uictpl.conf"
+[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
 test_environment_configuration
 
 # check builder compatibility
@@ -99,9 +98,10 @@ show_verbose 2 "Preparing chroot special filesystems..."
 init_script
 chroot_init
 
-if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+if [ ${SKIP_CUSTOMIZATION} -eq 0 ]; then
 	apply_customizations
-	# just in case something has changed
+	# just in case something has changed in the locale
+	# configuration provided in the customization
 	process_locales
 fi
 
@@ -116,10 +116,10 @@ update_sources
 update_system
 
 show_verbose 1 "Updating system..."
-chroot $TARGET/chroot apt-get ${QUIET} -y upgrade
-test_exec chroot "$TARGET/chroot" apt-get ${QUIET} -y upgrade
+chroot ${TARGET}/chroot apt-get ${QUIET} -y upgrade
+test_exec chroot "${TARGET}/chroot" apt-get ${QUIET} -y upgrade
 
-if [ $DO_REINSTALLATIONS -gt 0 ]; then
+if [ ${DO_REINSTALLATIONS} -gt 0 ]; then
 	install_software
 	install_packages
 	install_kernel
@@ -127,7 +127,7 @@ fi
 
 exit_apt_proxy
 
-if [ $SKIP_CUSTOMIZATION -eq 0 ]; then
+if [ ${SKIP_CUSTOMIZATION} -eq 0 ]; then
 	# just in case something was changed by apt-get
 	apply_customizations
 fi
