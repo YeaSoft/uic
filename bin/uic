@@ -1,15 +1,16 @@
 #!/bin/bash
 #
-# (c) 2012 YeaSoft Int'l - Leo Moll
+# (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20120627
-# This script is the dispatcher of the Ubuntu Installation Creator
+# Version 20140508
+# This script is the dispatcher of the
+# Unified Installation Creator
 
 #####################################
 # script initialization
 
 # load function library
-source uic_utils
+source /usr/share/yea/uicutils.sh || exit 1
 
 # load user customized configuration data
 [ -f /etc/uic.conf ] &&	source /etc/uic.conf
@@ -32,10 +33,13 @@ Commands:
         attach            attaches a partition to the installation
         detach            detaches a partition from the installation
 
+        install           installs packages into an installation environment
+        purge             purges packages from an installation environment
+
         pack              packages an installation environment for
                           distribution
 
-This is the main dispatcher of the Ubuntu Installation Creator (UIC)
+This is the main dispatcher of the Unified Installation Creator (UIC)
 
 EOF
 }

@@ -3,7 +3,7 @@
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
 # Version 20140508
-# This script installs packages into a
+# This script purges packages from a
 # unified installation environment
 
 #####################################
@@ -22,6 +22,7 @@ source /usr/share/yea/uicutils.sh || exit 1
 SKIP_CUSTOMIZATION=0
 DO_REINSTALLATIONS=0
 QUIET=-qq
+PURGE=--purge
 APTPARAMS=
 
 #####################################
@@ -29,16 +30,17 @@ APTPARAMS=
 
 function usage {
 	cat <<EOF
-usage: ${SCRIPTNAME} [-hvIC] [<environment name>] <package> [<package> [..]]
+usage: ${SCRIPTNAME} [-hvRIC] [<environment name>] <package> [<package> [..]]
 
 Options:
  -I, --do-reinstallations     reinstall all default packages
  -C, --skip-customization     skip the installation customization
+ -R, --remove                 remove instead of purging
  -y, --yes                    assume Yes to all queries and do not prompt
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script installs specified packages into a unified installation environment
+This script purges specified packages from a unified installation environment
 
 <environment name> can be omitted if the command is launched from within the
 environment directory. Otherwise it can be:
@@ -54,7 +56,7 @@ EOF
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,y,C,I --longoptions help,verbose,yes,skip-customization,do-reinstallations -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,y,R,C,I --longoptions help,verbose,yes,remove,skip-customization,do-reinstallations -- "$@")
 test_getopt
 eval set -- "${PARSER}"
 while true; do
@@ -63,6 +65,7 @@ while true; do
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
 	-I|--do-reinstallations)	DO_REINSTALLATIONS=1; shift;;
+	-R|--remove)			PURGE=; shift;;
 	-y|--yes)			APTPARAMS="${APTPARAMS} --yes"; shift;;
 	--)				shift; break;;
         *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
@@ -106,7 +109,7 @@ test_environment_configuration
 test_builder_compatibility
 
 if [ $# = 0 ]; then
-	show_error "No packages specified for installation"
+	show_error "No packages specified for purging"
 	exit 2
 fi
 
@@ -131,15 +134,22 @@ install_ppas
 update_sources
 update_system
 
+if [ -z ${PURGE} ]; then
+	show_verbose 1 "Removing $@"
+else
+	show_verbose 1 "Purging $@"
+fi
+
+chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
+test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
+chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
+test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
+
 if [ ${DO_REINSTALLATIONS} -gt 0 ]; then
 	install_software
 	install_packages
 	install_kernel
 fi
-
-show_verbose 1 "Installing $@"
-chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} install $@
-test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} install $@
 
 exit_apt_proxy
 

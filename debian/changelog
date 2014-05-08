@@ -5,6 +5,8 @@ uic (0.16) unstable; urgency=low
     distributions supported by debootstrap (Closes #3)
   * Feature: Add support for installing trusted keys for external
     repositories from the /install directory (Closes #2)
+  * Feature: New commands for direct installation/purge of
+    packages (Closes #4)
 
  -- Leo Moll <leo.moll@yeasoft.com>  Fri, 22 Nov 2013 16:58:48 +0100
 
