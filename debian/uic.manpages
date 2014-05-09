@@ -6,6 +6,7 @@ man/uic_create.7
 man/uic_detach.7
 man/uic_enter.7
 man/uic_get.7
-man/uic_pack.7
 man/uic_install.7
+man/uic_pack.7
+man/uic_purge.7
 man/uic_upgrade.7
