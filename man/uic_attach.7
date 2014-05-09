@@ -1,11 +1,12 @@
-.TH uic_attach 7 "14 March 2013" "Version 0.15" "Ubuntu Installation Creator"
+.TH uic_attach 7 "May 2014" "uic" "Unified Installation Creator"
 .SH NAME
-uic_attach - attaches a partition or directory to the specified installation environment
+uic_attach - attaches a partition or directory to the specified installation
+environment
 
 .SH SYNOPSIS
 .SP
-.B uic_attach [-hv] [
-.I -p <mount params>
+.B uic_attach [\-hv] [
+.I \-p <mount params>
 .B ]
 .I <device|dir>
 .B [
@@ -14,85 +15,94 @@ uic_attach - attaches a partition or directory to the specified installation env
 
 .SH DESCRIPTION
 .B uic_attach
-.R attaches a partition or directory to the specified Ubuntu installation
+attaches a partition or directory to the specified unified installation
 environment so that all subsequent creation and customization operations
 occur in the attached partition or directory.
 
-.IR "<device>|<dir> " "is the device name of the partition containing a valid filesystem to attach"
-to the specified installation environment. It can be also a valid subdirectory in an mounted filesystem if
-.B -p """-o bind"""
-.R is passed to the mount command.
+.I <device>|<dir>
+is the device name of the partition containing a valid filesystem to attach
+to the specified installation environment. It can be also a valid subdirectory
+in an mounted filesystem if
+.B \-p """\-o bind"""
+is passed to the mount command.
 
 
-.IR "<environment_path> " "can be omitted if the command is launched from within the environment"
-directory. Otherwise it can be:
+.I <environment_path>
+can be omitted if the command is launched from within the environment directory.
+Otherwise it can be:
 .IP -
 an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
 .IP -
 a path to the environment directory relative to the current directory
 .IP -
-a path to the environment directory relative to the default working path (usually /usr/src)
+a path to the environment directory relative to the default working path
+(usually /usr/src)
 
 .SH OPTIONS
 .TP
-.B -h, --help
+.B \-h, \-\-help
 shows the help for the command.
 
 .TP
-.B -v, --verbose
-increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+.B \-v, \-\-verbose
+increases the verbosity level of the command. If specified more than once, the
+verbosity level will be increased. 
 
 .TP
-.B -p, --mount-params
-.RB "full set of parameters to pass to the " "mount " "command. The set must be quoted in order to be recognized.
+.B \-p, \-\-mount-params
+full set of parameters to pass to the \fB mount \fR command. The set must be
+quoted in order to be recognized.
 
 .SH EXAMPLES
 
 .TP 
-.B uic_attach -v -p """-t ext3""" /dev/sdc1
-.RI "attaches the filesystem on " "/dev/sdc1 " "to the Ubuntu intallation environemnt in the current directory by"
-.RB "passing the parameters " "-t ext " "to the mount command and shows verbose output."
+.B uic_attach \-v \-p """\-t ext3""" /dev/sdc1
+attaches the filesystem on \fI/dev/sdc1\fR to the Ubuntu intallation environemnt
+in the current directory by passing the parameters \fB-t ext\fR to the mount
+command and shows verbose output.
 
 .TP 
-.B uic_attach -vv -p """-o bind""" /mnt/disk/testarea /root/netpoldo/netpoldo-1004-32
-.RI "attaches the subdirectory " "/mnt/disk/testarea " "to the Ubuntu intallation environemnt in " "/root/netpoldo/netpoldo-1004-32"
-.RB "by passing the parameters " "-o bind " "to the mount command and shows very verbose output."
+.B uic_attach \-vv \-p """\-o bind""" /mnt/disk/testarea /root/netpoldo/netpoldo-1004-32
+attaches the subdirectory \fI/mnt/disk/testarea\fR to the unified installation
+environemnt in \fI/root/netpoldo/netpoldo-1004-32\fR by passing the parameters
+\fB\-o bind\fR to the mount command and shows very verbose output.
 
 .SH FILES
 .TP 26n
 .I /etc/uic.conf
-.RB "uic configuration file. See " uic.conf (8)
+uic configuration file. See \fBuic.conf (8)\fR
 .TP
 .I <template>/uictpl.conf
-.RB "template definition and configuration file. See " uic.files (7)
+template definition and configuration file. See \fBuic.files (7)\fR
 .TP
 .I <template>/hooks
-.RB "template hook scripts directory See " uic.hooks (7)
+template hook scripts directory See \fBuic.hooks (7)\fR
 .TP
 .I <template>/files
-.RB "directory of files to add to the installation. See " uic.files (7)
+directory of files to add to the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/files.remove
-.RB "list of files to remove from the installation. See " uic.files (7)
+list of files to remove from the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/build
-.RB "directory of additional files used during the build steps. See " uic.files (7)
+directory of additional files used during the build steps. See \fRuic.files (7)\fR
 
 .SH AUTHOR
 .B uic
-.R was written by Leo Moll <leo.moll@yeasoft.com>
+was written by Leo Moll <leo.moll@yeasoft.com>
 
 .SH "SEE ALSO"
 .BR mount (8),
-.BR uic_attach (7).
+.BR uic (7),
 .BR uic_build (7),
 .BR uic_clean (7),
 .BR uic_create (7),
 .BR uic_detach (7).
 .BR uic_enter (7),
 .BR uic_get (7),
-.BR uic_pack (7),
 .BR uic_install (7),
+.BR uic_pack (7),
+.BR uic_purge (7),
 .BR uic_upgrade (7),
 .BR uic.files (7),
 .BR uic.hooks (7),

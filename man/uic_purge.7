@@ -1,23 +1,23 @@
-.TH uic_install 7 "May 2014" "uic" "Unified Installation Creator"
+.TH uic_purge 7 "May 2014" "uic" "Unified Installation Creator"
 .SH NAME
-uic_install - installs packages in the specified installation environment
+uic_purge - purges packages from the specified installation environment
 
 .SH SYNOPSIS
 .SP
-.BI "uic_install [\-hvyIC] [" "<environment_path>" "] " "<package>" " [" "<package>" " [..]]"
+.BI "uic_purge [\-hvyrIC] [" "<environment_path>" "] " "<package>" " [" "<package>" " [..]]"
 
 .SH DESCRIPTION
-.B uic_install
-performs an installation of the specified package list and all derived
-dependencies in the specified installation environment. In order to take in
-account potential changes in the list of additional software specified in the
-installation template, a reinstallation of all software listed in the template
-can be requested.
+.B uic_purge
+performs an intense uninstallation (purge) of the specified package list and all
+derived dependencies from the specified installation environment. In order to
+take in account potential changes in the list of additional software specified
+in the installation template, a reinstallation of all software listed in the
+template can be requested.
 .PP
 The special filesystems \fI/sys\fR, \fI/proc\fR, \fI/dev\fR, \fI/dev/pts\fR and
 \fI/dev/shm\fR are mounted in the installation area in order to offer full
-functionality during the installation. The undesired automatic start of services
-performed by software installation is inhibited by a temporary policy
+functionality during the uninstallation. The undesired automatic start of
+services performed by software installation is inhibited by a temporary policy
 (\fI/usr/sbin/policy-rc.d\fR fails with return code 101).
 .PP
 
@@ -48,6 +48,10 @@ verbosity level will be increased.
 assume Yes to all queries and do not prompt
 
 .TP
+.B \-r, \-\-remove
+only remove packages instead of purging them
+
+.TP
 .B \-I, \-\-do\-reinstallations
 reinstall all packages listed in the template
 
@@ -59,12 +63,12 @@ skips the installation customization
 .SH EXAMPLES
 
 .TP
-.B uic install \-vy htop partclone
+.B uic purge \-vy htop partclone
 if the current directory is the home of an installation environment (the
 \fIuictpl.conf\fR file is there) and the installation environment was properly
 initialised and populated with \fIuic create\fR, the packages \fBhtop\fR,
-\fBpartclone\fR and all derived dependencies will be installed without asking
-for confirmation. The command will produce verbose output.
+\fBpartclone\fR and all derived dependencies will be uninstalled and purged
+without asking for confirmation. The command will produce verbose output.
 
 
 .SH FILES
@@ -100,8 +104,8 @@ was written by Leo Moll <leo.moll@yeasoft.com>
 .BR uic_detach (7).
 .BR uic_enter (7),
 .BR uic_get (7),
+.BR uic_install (7),
 .BR uic_pack (7),
-.BR uic_purge (7),
 .BR uic_upgrade (7),
 .BR uic.files (7),
 .BR uic.hooks (7),

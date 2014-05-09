@@ -1,82 +1,87 @@
-.TH uic_enter 7 "14 March 2013" "Version 0.15" "Ubuntu Installation Creator"
+.TH uic_enter 7 "May 2014" "uic" "Unified Installation Creator"
 .SH NAME
-uic_enter - chroots into the installation in the specified installation environment
+uic_enter - chroots into the installation in the specified installation
+environment
 
 .SH SYNOPSIS
 .SP
-.B uic_enter [-hv] [
+.B uic_enter [\-hv] [
 .I <environment_path>
 .B ]
 
 .SH DESCRIPTION
 .B uic_enter
-.R chroots into the installation in the specified installation environment so that the user
-can make changes directly into the installation (like installing additional software). The shell
-prompt will be slightly modified in order to remember the user that he is working in a
-chroot-shell.
+chroots into the installation in the specified installation environment so that
+the user can make changes directly into the installation (like installing
+additional software). The shell prompt will be slightly modified in order to
+remember the user that he is working in a chroot-shell.
 .PP
-.RI "The special filesystems " "/sys" ", " "/proc" ", " "/dev" ", " "/dev/pts" " and " "/dev/shm "
-are mounted in the installation in order to offer full functionality to the user. The undesired
-automatic start of services performed by software installation is inhibited by a temporary policy
-.RI "(" "/usr/sbin/policy-rc.d" " fails with return code 101)."
+The special filesystems \fI/sys\fR, \fI/proc\fR, \fI/dev\fR, \fI/dev/pts\fR and
+\fI/dev/shm\fR are mounted in the installation area in order to offer full
+functionality during the installation. The undesired automatic start of services
+performed by software installation is inhibited by a temporary policy
+(\fI/usr/sbin/policy-rc.d\fR fails with return code 101).
 .PP
-.RB "To exit the chroot-shell, use the command " "exit " "or hit " "Ctrl+D" "."
+To exit the chroot-shell, use the command \fBexit\fR or hit \fBCtrl+D\fR.
 
-.IR "<environment_path> " "can be omitted if the command is launched from within the environment
-directory. Otherwise it can be:
+.I <environment_path>
+can be omitted if the command is launched from within the environment directory.
+Otherwise it can be:
 .IP -
 an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
 .IP -
 a path to the environment directory relative to the current directory
 .IP -
-a path to the environment directory relative to the default working path (usually /usr/src)
+a path to the environment directory relative to the default working path
+(usually /usr/src)
 
 .SH OPTIONS
 .TP
-.B -h, --help
+.B \-h, \-\-help
 shows the help for the command.
 
 .TP
-.B -v, --verbose
-increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+.B \-v, \-\-verbose
+increases the verbosity level of the command. If specified more than once, the
+verbosity level will be increased. 
 
 
 .SH FILES
 .TP 26n
 .I /etc/uic.conf
-.RB "uic configuration file. See " uic.conf (8)
+uic configuration file. See \fBuic.conf (8)\fR
 .TP
 .I <template>/uictpl.conf
-.RB "template definition and configuration file. See " uic.files (7)
+template definition and configuration file. See \fBuic.files (7)\fR
 .TP
 .I <template>/hooks
-.RB "template hook scripts directory See " uic.hooks (7)
+template hook scripts directory See \fBuic.hooks (7)\fR
 .TP
 .I <template>/files
-.RB "directory of files to add to the installation. See " uic.files (7)
+directory of files to add to the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/files.remove
-.RB "list of files to remove from the installation. See " uic.files (7)
+list of files to remove from the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/build
-.RB "directory of additional files used during the build steps. See " uic.files (7)
+directory of additional files used during the build steps. See \fRuic.files (7)\fR
 
 .SH AUTHOR
 .B uic
-.R was written by Leo Moll <leo.moll@yeasoft.com>
+was written by Leo Moll <leo.moll@yeasoft.com>
 
 .SH "SEE ALSO"
+.BR uic (7),
 .BR uic_attach (7).
 .BR uic_build (7),
 .BR uic_clean (7),
 .BR uic_create (7),
 .BR uic_detach (7).
-.BR uic_enter (7),
 .BR uic_get (7),
-.BR uic_pack (7),
 .BR uic_install (7),
+.BR uic_pack (7),
+.BR uic_purge (7),
 .BR uic_upgrade (7),
 .BR uic.files (7),
 .BR uic.hooks (7),
 .BR uic.conf (7)
-

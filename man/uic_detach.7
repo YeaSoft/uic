@@ -1,90 +1,99 @@
-.TH uic_detach 7 "14 March 2013" "Version 0.15" "Ubuntu Installation Creator"
+.TH uic_detach 7 "May 2014" "uic" "Unified Installation Creator"
 .SH NAME
-uic_detach - detaches a partition or directory from the specified installation environment
+uic_detach - detaches a partition or directory from the specified installation
+environment
 
 .SH SYNOPSIS
 .SP
-.B uic_detach [-hv] [
-.I -p <umount params>
+.B uic_detach [\-hv] [
+.I \-p <umount params>
 .B ] [
 .I <environment_path>
 .B ]
 
 .SH DESCRIPTION
 .B uic_detach
-.R detaches a partition or directory previously attached from the specified Ubuntu installation
-environment so that all subsequent creation and customization operations will occur in the 
-same filesystem the installation environment is located.
+detaches a partition or directory previously attached from the specified unified
+installation environment so that all subsequent creation and customization
+operations will occur in the same filesystem the installation environment is
+located.
 
-.IR "<environment_path> " "can be omitted if the command is launched from within the environment"
-directory. Otherwise it can be:
+.I <environment_path>
+can be omitted if the command is launched from within the environment directory.
+Otherwise it can be:
 .IP -
 an absolute path to the environment directory (e.g.: /home/leo/netpoldo-1004-32)
 .IP -
 a path to the environment directory relative to the current directory
 .IP -
-a path to the environment directory relative to the default working path (usually /usr/src)
+a path to the environment directory relative to the default working path
+(usually /usr/src)
 
 .SH OPTIONS
 .TP
-.B -h, --help
+.B \-h, \-\-help
 shows the help for the command.
 
 .TP
-.B -v, --verbose
-increases the verbosity level of the command. If specified more than once, the verbosity level will be increased. 
+.B \-v, \-\-verbose
+increases the verbosity level of the command. If specified more than once, the
+verbosity level will be increased. 
 
 .TP
-.B -p, --umount-params
-.RB "full set of parameters to pass to the " "umount " "command. The set must be quoted in order to be recognized.
+.B \-p, \-\-umount-params
+full set of parameters to pass to the \fBumount\fR command. The set must be
+quoted in order to be recognized.
 
 .SH EXAMPLES
 
 .TP 
-.B uic_detach -v
-.RI "detaches the previously attached filesystem from the Ubuntu intallation environemnt in the current directory"
-.RB "and shows verbose output."
+.B uic_detach \-v
+detaches the previously attached filesystem from the Ubuntu installation
+environment in the current directory and shows verbose output.
 
 .TP 
-.B uic_detach -vv -p """-f""" /root/netpoldo/netpoldo-1004-32
-.RI "detaches the previously attached filesystem from the Ubuntu intallation environemnt in " "/root/netpoldo/netpoldo-1004-32"
-.RB "by passing the parameter " "-f " "to the umount command and shows very verbose output."
+.B uic_detach \-vv \-p """\-f""" /root/netpoldo/netpoldo-1004-32
+detaches the previously attached filesystem from the Ubuntu intallation
+environment in \fI/root/netpoldo/netpoldo-1004-32\fR by passing the parameter
+.B \-f
+to the umount command and shows very verbose output.
+
 
 .SH FILES
 .TP 26n
 .I /etc/uic.conf
-.RB "uic configuration file. See " uic.conf (8)
+uic configuration file. See \fBuic.conf (8)\fR
 .TP
 .I <template>/uictpl.conf
-.RB "template definition and configuration file. See " uic.files (7)
+template definition and configuration file. See \fBuic.files (7)\fR
 .TP
 .I <template>/hooks
-.RB "template hook scripts directory See " uic.hooks (7)
+template hook scripts directory See \fBuic.hooks (7)\fR
 .TP
 .I <template>/files
-.RB "directory of files to add to the installation. See " uic.files (7)
+directory of files to add to the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/files.remove
-.RB "list of files to remove from the installation. See " uic.files (7)
+list of files to remove from the installation. See \fBuic.files (7)\fR
 .TP
 .I <template>/build
-.RB "directory of additional files used during the build steps. See " uic.files (7)
+directory of additional files used during the build steps. See \fRuic.files (7)\fR
 
 .SH AUTHOR
 .B uic
-.R was written by Leo Moll <leo.moll@yeasoft.com>
+was written by Leo Moll <leo.moll@yeasoft.com>
 
 .SH "SEE ALSO"
-.BR umount (8),
+.BR uic (7),
 .BR uic_attach (7).
 .BR uic_build (7),
 .BR uic_clean (7),
 .BR uic_create (7),
-.BR uic_detach (7).
 .BR uic_enter (7),
 .BR uic_get (7),
-.BR uic_pack (7),
 .BR uic_install (7),
+.BR uic_pack (7),
+.BR uic_purge (7),
 .BR uic_upgrade (7),
 .BR uic.files (7),
 .BR uic.hooks (7),
