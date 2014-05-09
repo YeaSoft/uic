@@ -3,15 +3,20 @@ Section: admin
 Priority: extra
 Maintainer: Leo Moll <leo.moll@yeasoft.com>
 Build-Depends: debhelper (>= 7.0.50)
-Standards-Version: 3.9.2
-Homepage: http://www.yeasoft.com/site/projects:uic
+Standards-Version: 3.9.4
 Vcs-Git: https://github.com/YeaSoft/uic.git
+Vcs-browser: https://github.com/YeaSoft/uic
+Homepage: http://www.yeasoft.com/site/projects:uic
 
 Package: uic
 Architecture: all
-Depends: debootstrap ${misc:Depends}
-Description: The Ubuntu Installation Creator
- uic permits to automate the creation of customized command line Linux
- installations based on Debian-Style distributions. It is mainly intended
- as a toolkit for system administrators who have often to install Linux
- servers with particular, repeating characteristics.
+Depends: ${misc:Depends}, debootstrap, wget
+Description: The Unified Installation Creator
+ uic is a toolkit build on top of debootstrap that permits
+ to automate the creation of customized command line Linux
+ installations based on Debian-Style distributions. It is
+ able to create life distributions as well as install a
+ customized distribution on a target system.
+ It is mainly intended as a toolkit for system administrators
+ who have often to install Linux servers with particular,
+ repeating characteristics.

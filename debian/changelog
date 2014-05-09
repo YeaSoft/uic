@@ -1,4 +1,4 @@
-uic (0.16) unstable; urgency=low
+uic (0.16.1-1) unstable; urgency=low
 
   * Fix: improved APT proxy handling
   * Feature: Add support for installing trusted keys for external

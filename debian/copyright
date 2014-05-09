@@ -1,15 +1,10 @@
 Format: http://dep.debian.net/deps/dep5
 Upstream-Name: uic
-Source: <http://www.yeasoft.com>
+Source: https://github.com/YeaSoft/uic
 
 Files: *
-Copyright: 2012-2013 Leo Moll <leo.moll@yeasoft.com>
+Copyright: 2012-2014 Leo Moll <leo.moll@yeasoft.com>
 License: GPL-2+
- This package was debianized by Leo Moll <leo.moll@yeasoft.com> on
- Fri, 30 Mar 2012 19:09:45 +0200.
- .
- It was written from scratch for Debian by Leo Moll <leo.moll@yeasoft.com>
- .
  This package is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation; either version 2 of the License, or
