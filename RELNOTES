@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Ubuntu Installation Creator - Version 0.15    2013-03-14
+Release Notes - uic - Unified Installation Creator - Version 0.16.2 2014-05-10
 ==============================================================================
 
 * Release Scope
@@ -10,24 +10,31 @@ Release Notes - uic - Ubuntu Installation Creator - Version 0.15    2013-03-14
 
 Release Scope
 -------------
-This release provides consolidations based on the experiences collected during
-the development of the Alix Software Project by using UIC as an installation
-tool. Since the release date for Debian Wheezy will probably come soon, uic
-will support also installations based on Debian Wheezy.
+
+By implementing the possibility to seamlessly add any package repository into
+an installation, uic has released the last dependency from Ubuntu making it
+possible to create installations for any debian based distribution. This
+makes is possible to replace lots of customisations in existing templates
+with packages making it possible to keep them up to date.
+Also the compatibility between build system and taget system is now checked
+against the effective capabilities of the system.
+After two years of internal use, the project is now getting more mature and
+therefore the sources are now maintained on GitHub.
 
 
 What's new
 ----------
 
-  * Feature: added support for debian 7 (wheezy)
-  * Feature: new command uic install permits the direct installation of
-    packages into the installation environment
-  * Fix: PPA can now also be installed if the certificate of the launchpad
-    site cannot be verified
-  * Feature: uic prepare has been renamed to uic get since this name
-    describes better the function from the user's point of view
-  * Feature: new function of uic get to list all templates available
-    on the repositories
+  * Fix: improved APT proxy handling
+  * Feature: Add support for installing trusted keys for external
+    repositories from the /install directory (Closes #2)
+  * Feature: release compatibility is now tested towards the
+    distributions supported by debootstrap (Closes #3)
+  * Feature: New commands for direct installation/purge of
+    packages (Closes #4)
+  * Feature: Added -e option to uic_get to enter directly
+    the installation area (Closes #5)
+  * Feature: Added template compatibility check (Closes #6)
 
 Known Problems
 --------------
@@ -41,6 +48,18 @@ Known Problems
 
 Release History
 ---------------
+
+Version 0.15 released on 2013-03-14
+
+  * Feature: added support for debian 7 (wheezy)
+  * Feature: new command uic install permits the direct installation of
+    packages into the installation environment
+  * Fix: PPA can now also be installed if the certificate of the launchpad
+    site cannot be verified
+  * Feature: uic prepare has been renamed to uic get since this name
+    describes better the function from the user's point of view
+  * Feature: new function of uic get to list all templates available
+    on the repositories
 
 Version 0.14 released on 2012-05-23
 
