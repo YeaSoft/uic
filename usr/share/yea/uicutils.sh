@@ -12,8 +12,7 @@ SCRIPTNAME=$(basename $0)
 SCRIPTPATH=$(expr match "$0" '\(.*\)'\/${SCRIPTNAME})
 VERBOSE=0
 # uic specific
-VERSION='@VERSION@'
-VERSION='0.16'
+VERSION='0.16.2'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -236,6 +235,23 @@ function cleanup_mounts() {
 	done
 }
 
+
+function uic_require() {
+	if [ -z $1 ]; then
+		show_verbose 2 "No specific version requested"
+		return 0
+	fi
+	if [ "$1" = "${VERSION}" ]; then
+		show_verbose 2 "Requested version $1 exactly matched"
+		return 0
+	fi
+	if [ "$1" \< "${VERSION}" ]; then
+		show_verbose 2 "Requested version $1 satisfied since running on ${VERSION}"
+		return 0
+	fi
+	show_error "Template incompatible since it requires at least version $1 of uic"
+	exit 5
+}
 
 function find_environment() {
 	if [ $# -lt 1 ]; then
