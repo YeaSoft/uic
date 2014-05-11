@@ -32,7 +32,7 @@ Options:
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script enters as chroot into an Ubuntu installation environment
+This script enters as chroot into a unified installation environment
 
 <environment name> can be omitted if the command is launched from within the
 environment directory. Otherwise it can be:

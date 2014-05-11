@@ -35,7 +35,7 @@ Options:
  -v, --verbose                increase verbosity
 (-h) --help                   show this help (-h works with no other options)
 
-This script detaches a partition or directory from the Ubuntu installation
+This script detaches a partition or directory from a unified installation
 environment (if previously attached).
 
 <environment name> can be omitted if the command is launched from within the
