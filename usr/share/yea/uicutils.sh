@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20140502
+# VERSION 20140511
 # function collection for the unified installation creator
 
 #####################
@@ -12,7 +12,7 @@ SCRIPTNAME=$(basename $0)
 SCRIPTPATH=$(expr match "$0" '\(.*\)'\/${SCRIPTNAME})
 VERBOSE=0
 # uic specific
-VERSION='0.16.2'
+VERSION='0.16.3'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -24,16 +24,16 @@ TARGET=
 
 # The default working directory for installations
 # Default: UIC_WORKDIR=/usr/src
-UIC_WORKDIR=/usr/src
+[ -z ${UIC_WORKDIR} ] && UIC_WORKDIR=/usr/src
 
 # The default APT proxy to use
 # Default: none
-UIC_APTPROXY=
+[ -z ${UIC_APTPROXY} ] && UIC_APTPROXY=
 
 # The default UIC template repositories (separated
 # by spaces)
 # Default: http://www.yeasoft.com/uic-templates
-UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
+[ -z ${UIC_REPOSITORIES} ] && UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
 
 #####################
 # Functions

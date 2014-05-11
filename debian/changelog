@@ -1,4 +1,4 @@
-uic (0.16.2-1) unstable; urgency=low
+uic (0.16.3-1) unstable; urgency=low
 
   * Feature: Add support for installing trusted keys for external
     repositories from the /install directory (Closes #2)
@@ -12,6 +12,9 @@ uic (0.16.2-1) unstable; urgency=low
   * Fix: improved APT proxy handling
   * Fix: debootstrap errors are now detected and cause uic_create
     to stop further processing (Closes 8)
+  * Fix: The variables UIC_WORKDIR, UIC_APTPROXY and UIC_REPOSITORIES
+    are not overwritten by initialisation if they are already defined
+    in the environment (Closes #9)
 
  -- Leo Moll <leo.moll@yeasoft.com>  Sun, 11 May 2014 17:51:00 +0200
 

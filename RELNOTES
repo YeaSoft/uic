@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Unified Installation Creator - Version 0.16.2 2014-05-10
+Release Notes - uic - Unified Installation Creator - Version 0.16.3 2014-05-11
 ==============================================================================
 
 * Release Scope
@@ -37,6 +37,9 @@ What's new
   * Fix: improved APT proxy handling
   * Fix: debootstrap errors are now detected and cause uic_create
     to stop further processing (Closes 8)
+  * Fix: The variables UIC_WORKDIR, UIC_APTPROXY and UIC_REPOSITORIES
+    are not overwritten by initialisation if they are already defined
+    in the environment (Closes #9)
 
 Known Problems
 --------------
