@@ -25,7 +25,6 @@ therefore the sources are now maintained on GitHub.
 What's new
 ----------
 
-  * Fix: improved APT proxy handling
   * Feature: Add support for installing trusted keys for external
     repositories from the /install directory (Closes #2)
   * Feature: release compatibility is now tested towards the
@@ -35,6 +34,9 @@ What's new
   * Feature: Added -e option to uic_get to enter directly
     the installation area (Closes #5)
   * Feature: Added template compatibility check (Closes #6)
+  * Fix: improved APT proxy handling
+  * Fix: debootstrap errors are now detected and cause uic_create
+    to stop further processing (Closes 8)
 
 Known Problems
 --------------

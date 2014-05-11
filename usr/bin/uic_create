@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140511
 # This script creates a unified installation environment
 
 #####################################
@@ -112,12 +112,13 @@ test_builder_compatibility
 
 show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
 call_hook pre_debootstrap
+FREPO=$(get_filtered_repository)
 if [ -n "${UIC_PREINSTALL}" ]; then
-	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
+	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
 else
-	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
+	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
 fi
-test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" $(get_filtered_repository)
+test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
 call_hook post_debootstrap
 
 show_verbose 2 "Preparing chroot special filesystems..."
