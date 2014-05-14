@@ -1,5 +1,5 @@
 ==============================================================================
-Release Notes - uic - Unified Installation Creator - Version 0.16.4 2014-05-14
+Release Notes - uic - Unified Installation Creator - Version 0.16.5 2014-05-15
 ==============================================================================
 
 * Release Scope
@@ -27,6 +27,17 @@ therefore the project will be maintained on GitHub starting from now.
 What's new
 ----------
 
+  * Feature: Support encrypted passwords in UIC_ROOTPASSWORD by
+    specifying UIC_ROOTPASSWORD=SHADOW:$6$HnFcw.Hb$G5.....
+  * Feature: improved and streamlined /etc/fstab autogeneration
+  * Feature: Configuration of target hostname via UIC_HOSTNAME will
+    replace customized files in /files
+  * Feature: Locale en_US.UTF-8 will now be configured by default
+    (no need any more to supply adapted files)
+  * Feature: Resolver file /etc/resolv.conf will always be automatically
+    created if no custom resolver is supplied via /files
+  * Feature: Automatically created resolver file /etc/resolv.conf will
+    be based on data stored in UIC_PUBLICDNS
   * Feature: Add support for installing trusted keys for external
     repositories from the /install directory (Closes #2)
   * Feature: release compatibility is now tested towards the
@@ -36,14 +47,6 @@ What's new
   * Feature: Added -e option to uic_get to enter directly
     the installation area (Closes #5)
   * Feature: Added template compatibility check (Closes #6)
-  * Feature: Configuration of target hostname via UIC_HOSTNAME will
-    replace customized files in /files
-  * Feature: Locale en_US.UTF-8 will now be configured by default
-    (no need any more to supply adapted files)
-  * Feature: Resolver file /etc/resolv.conf will always be automatically
-    created if no custom resolver is supplied via /files
-  * Feature: Automatically created resolver file /etc/resolv.conf will
-    be based on data stored in UIC_PUBLICDNS
   * Feature: decent /etc/apt/sources.list autocreated by uic if not
     supplied via /files
   * Fix: improved APT proxy handling
