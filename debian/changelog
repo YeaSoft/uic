@@ -1,3 +1,10 @@
+uic (0.16.5-1) unstable; urgency=low
+
+  * Feature: Support encrypted passwords in UIC_ROOTPASSWORD by
+    specifying UIC_ROOTPASSWORD=SHADOW:$6$HnFcw.Hb$G5.....
+
+ -- Leo Moll <leo.moll@yeasoft.com>  Thu, 15 May 2014 22:12:15 +0200
+
 uic (0.16.4-1) unstable; urgency=low
 
   * Feature: Configuration of target hostname via UIC_HOSTNAME will

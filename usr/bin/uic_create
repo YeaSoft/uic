@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140511
+# Version 20140514
 # This script creates a unified installation environment
 
 #####################################
@@ -173,16 +173,22 @@ exit_apt_proxy
 apply_customizations
 
 case "${UIC_ROOTPASSWORD}" in
-"")	show_warning "Password will not be initialized"
-	;;
-"ask")	show_verbose 1 "Asking for root password..."
-	until chroot "${TARGET}/chroot" passwd root; do
-		show_warning "You have to specify a valid password for root"
-	done
-	;;
-*)	show_verbose 1 "Setting root password..."
-	echo -e "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
-	;;
+"")		show_warning "Password will not be initialized"
+		;;
+"ask")		show_verbose 1 "Asking for root password..."
+		until chroot "${TARGET}/chroot" passwd root; do
+			show_warning "You have to specify a valid password for root"
+		done
+		;;
+"SHADOW:*")	show_verbose 1 "Setting encrypted root password..."
+		# make sure there is a root password in the file
+		printf "password\npassword\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
+		# replace it with the encrypted password
+		sed -i -e "s/root:[^:]*:/root:$(echo -n ${UIC_ROOTPASSWORD:7} | sed -e 's/\//\\\//g'):/" "${TARGET}/chroot/etc/shadow"
+		;;
+*)		show_verbose 1 "Setting root password..."
+		printf "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
+		;;
 esac
 
 call_chroot_hook chroot_post_installation
