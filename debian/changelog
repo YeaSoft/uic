@@ -1,3 +1,18 @@
+uic (0.16.4-1) unstable; urgency=low
+
+  * Feature: Configuration of target hostname via UIC_HOSTNAME will
+    replace customized files in /files
+  * Feature: Locale en_US.UTF-8 will now be configured by default
+    (no need any more to supply adapted files)
+  * Feature: Resolver file /etc/resolv.conf will always be automatically
+    created if no custom resolver is supplied via /files
+  * Feature: Automatically created resolver file /etc/resolv.conf will
+    be based on data stored in UIC_PUBLICDNS
+  * Feature: decent /etc/apt/sources.list autocreated by uic if not
+    supplied via /files
+
+ -- Leo Moll <leo.moll@yeasoft.com>  Wed, 14 May 2014 22:12:15 +0200
+
 uic (0.16.3-1) unstable; urgency=low
 
   * Feature: Add support for installing trusted keys for external

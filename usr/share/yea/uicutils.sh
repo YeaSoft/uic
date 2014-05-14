@@ -2,21 +2,25 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20140511
+# VERSION 20140514
 # function collection for the unified installation creator
 
 #####################
 # Internal Variables
 # generic script helpers
-SCRIPTNAME=$(basename $0)
-SCRIPTPATH=$(expr match "$0" '\(.*\)'\/${SCRIPTNAME})
+case "$0" in
+/*)  SCRIPTFULL="$0";;
+./*) SCRIPTFULL="${PWD}/${0#./}";;
+*)   SCRIPTFULL="${PWD}/${0}";;
+esac
+SCRIPTNAME=$(basename "${SCRIPTFULL}")
+SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.3'
+VERSION='0.16.4'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
-OLDHOSTNAME=$(hostname)
 TARGET=
 
 ########################
@@ -34,6 +38,16 @@ TARGET=
 # by spaces)
 # Default: http://www.yeasoft.com/uic-templates
 [ -z ${UIC_REPOSITORIES} ] && UIC_REPOSITORIES=http://www.yeasoft.com/uic-templates
+
+# The default name servers to configure in
+# targets (separated by spaces)
+# Default: 8.8.8.8 8.8.4.4
+[ -z ${UIC_PUBLICDNS} ] && UIC_PUBLICDNS="8.8.8.8 8.8.4.4"
+
+# The default domain to use for hostname generation
+# when no domain part was specified
+# Default: example.com
+[ -z ${UIC_DEFAULTDOMAIN} ] && UIC_DEFAULTDOMAIN="example.com"
 
 #####################
 # Functions
@@ -59,38 +73,37 @@ function show_error {
 }
 
 function test_exec {
-	case $? in
-	0);;
-	*)	case "$1" in
+	RET_VAL=$?
+	if [ ! ${RET_VAL} ]; then
+		case "$1" in
 		"")	show_error "last command failed with error (code $?)";;
 		*)	show_error "$1 failed with error (code $?)";;
 		esac
-		if [ -n "$2" ]; then
-			show_error "commandline: ${*:2}"
-		fi
-		exit $?;;
-	esac
+		[ -n "$2" ] && show_error "commandline: ${*:2}"
+		exit ${RET_VAL}
+	fi
 }
 
 function test_getopt {
-	case $? in
+	RET_VAL=$?
+	case ${RET_VAL} in
 	0);;
-	1) show_error "syntax or usage error (code $?)"; exit $?;;
-	2) show_error "syntax or usage error (code $?) in [getopt]"; exit $?;;
-	3) show_error "internal error (code $?) in [getopt]"; exit $?;;
-	4) show_error "wrong getopt version installed"; exit $?;;
-	*) show_error "unknown getopt error (code $?)"; exit $?;;
+	1) show_error "syntax or usage error (code $?)"; exit ${RET_VAL};;
+	2) show_error "syntax or usage error (code $?) in [getopt]"; exit ${RET_VAL};;
+	3) show_error "internal error (code $?) in [getopt]"; exit ${RET_VAL};;
+	4) show_error "wrong getopt version installed"; exit ${RET_VAL};;
+	*) show_error "unknown getopt error (code $?)"; exit ${RET_VAL};;
 	esac
 }
 
 # uic specific
 
-function init_script() {
+function init_script {
 	trap cleanup_script INT QUIT TERM EXIT
         call_hook init_script
 }
 
-function cleanup_script() {
+function cleanup_script {
         trap - INT QUIT TERM EXIT
         call_hook exit_script
         chroot_exit
@@ -98,7 +111,7 @@ function cleanup_script() {
 }
 
 
-function chroot_init() {
+function chroot_init {
 	if [ ${SPECIALFSMOUNT} -lt 1 ]; then
 		show_verbose 1 "Mounting special file systems in environment..."
 		mount_special
@@ -108,7 +121,7 @@ function chroot_init() {
 	fi
 }
 
-function mount_special() {
+function mount_special {
 	for MOUNT_POINT in ${SPECIALFSM}; do
 		if ! grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
 			mount -o bind ${MOUNT_POINT} ${TARGET}/chroot${MOUNT_POINT}
@@ -116,16 +129,16 @@ function mount_special() {
 	done
 }
 
-function enable_policy() {
-	echo -e "#!/bin/sh\nexit 101" > "${TARGET}/chroot/usr/sbin/policy-rc.d"
+function enable_policy {
+	printf "#!/bin/sh\nexit 101\n" > "${TARGET}/chroot/usr/sbin/policy-rc.d"
 	chmod +x "${TARGET}/chroot/usr/sbin/policy-rc.d"
 }
 
-function disable_policy() {
+function disable_policy {
 	[ -f "${TARGET}/chroot/usr/sbin/policy-rc.d" ] && rm "${TARGET}/chroot/usr/sbin/policy-rc.d"
 }
 
-function enable_dpkg_options() {
+function enable_dpkg_options {
 	# this method does not work with older versions of dpkg
 	# mkdir -p "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d"
 	# echo "# automatically added by uic - will be deleted at end of operation" > "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
@@ -139,14 +152,14 @@ function enable_dpkg_options() {
 	echo "force-confold" >> "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
 }
 
-function disable_dpkg_options() {
+function disable_dpkg_options {
 	# this method does not work with older versions of dpkg
 	# [ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts" ] && rm "${TARGET}/chroot/etc/dpkg/dpkg.cfg.d/zzuicopts"
 	# alternative method
 	[ -f "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" ] && mv "${TARGET}/chroot/etc/dpkg/dpkg.cfg.uic-save" "${TARGET}/chroot/etc/dpkg/dpkg.cfg"
 }
 
-function umount_special() {
+function umount_special {
 	for MOUNT_POINT in ${SPECIALFSU}; do
 		if grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
 			umount ${TARGET}/chroot${MOUNT_POINT}
@@ -154,7 +167,7 @@ function umount_special() {
 	done
 }
 
-function chroot_exit() {
+function chroot_exit {
 	if [ ${SPECIALFSMOUNT} -gt 0 ]; then
 		show_verbose 1 "Unmounting special file systems in environment..."
 		disable_dpkg_options
@@ -164,7 +177,7 @@ function chroot_exit() {
 	fi
 }
 
-function test_mountinuse() {
+function test_mountinuse {
 	if grep "${TARGET}/chroot/" /proc/mounts; then
 		show_error "WARNING: There are active mounts in the installation environment probably"
 		show_error "         because of an active preparation session. The execution will be"
@@ -173,7 +186,7 @@ function test_mountinuse() {
 	fi
 }
 
-function cleanup_mounts() {
+function cleanup_mounts {
 	if grep "${TARGET}/chroot/" /proc/mounts; then
 		# let's try to unmount them
 		for MOUNT_POINT in $(grep "${TARGET}/chroot/" /proc/mounts | awk '{print $2}'); do
@@ -236,8 +249,8 @@ function cleanup_mounts() {
 }
 
 
-function uic_require() {
-	if [ -z $1 ]; then
+function uic_require {
+	if [ -z "$1" ]; then
 		show_verbose 2 "No specific version requested"
 		return 0
 	fi
@@ -253,7 +266,7 @@ function uic_require() {
 	exit 5
 }
 
-function find_environment() {
+function find_environment {
 	if [ $# -lt 1 ]; then
 		# no environment name specified. It must be here....
 		test_environment "$(pwd)"
@@ -283,7 +296,7 @@ function find_environment() {
 	fi
 }
 
-function test_environment() {
+function test_environment {
 	if [ ! -d "$1" ]; then
 		show_error "Environment $1 does not exist"
 		exit 1
@@ -300,7 +313,7 @@ function test_environment() {
 	fi
 }
 
-function test_environment_empty() {
+function test_environment_empty {
 	if [ ! -d "${TARGET}/chroot" ]; then
 		show_error "Installation environment is empty. Use 'uic create' to create a new one."
 		exit 1
@@ -311,7 +324,8 @@ function test_environment_empty() {
 	fi
 }
 
-function test_environment_configuration() {
+function test_environment_configuration {
+	# mandatory parameters
 	if [ -z "${UIC_SRCNAME}" ]; then
 		show_error "UIC_SRCNAME missing in environment configuration file"
 		exit 1
@@ -336,13 +350,12 @@ function test_environment_configuration() {
 		show_error "UIC_KERNEL missing in environment configuration file"
 		exit 1
 	fi
-	if [ -z "${UIC_ROOTPASSWORD}" ]; then
-		show_error "UIC_ROOTPASSWORD missing in environment configuration file"
-		exit 1
-	fi
+	# optional parameters
+	[ -z "${UIC_SRCDESC}" ]		&& UIC_SRCDESC="${UIC_SRCNAME}"
+	[ -z "${UIC_ROOTPASSWORD}" ]	&& UIC_ROOTPASSWORD="ask"
 }
 
-function test_arch_compatibility() {
+function test_arch_compatibility {
 	MY_ARCH=$(dpkg-query -W -f='${Architecture}\n' dpkg)
 	if [ "${MY_ARCH}" = "${UIC_ARCH}" ]; then
 		show_verbose 2 "Target has the same architecture (${MY_ARCH})"
@@ -358,7 +371,7 @@ function test_arch_compatibility() {
 	return 3
 }
 
-function test_distributor_compatibility() {
+function test_distributor_compatibility {
 	if ! which lsb_release > /dev/null; then
 		# no lsb_release on this platform
 		return 3;
@@ -371,14 +384,14 @@ function test_distributor_compatibility() {
 	return 3
 }
 
-function test_release_compatibility() {
+function test_release_compatibility {
 	if [ -f "/usr/share/debootstrap/scripts/${UIC_RELEASE}" ]; then
 		return 0
 	fi
 	return 3
 }
 
-function test_builder_compatibility() {
+function test_builder_compatibility {
 	if ! test_distributor_compatibility; then
 		show_error "This system is not compatible with the specified template"
 		exit 3
@@ -394,7 +407,7 @@ function test_builder_compatibility() {
 	return 0
 }
 
-function cleanup_apt_cache() {
+function cleanup_apt_cache {
 	show_verbose 2 "Cleaning up APT cache"
 	if [ -z "$1" ]; then
 		apt-get clean
@@ -403,7 +416,7 @@ function cleanup_apt_cache() {
 	fi
 }
 
-function cleanup_apt_all() {
+function cleanup_apt_all {
 	show_verbose 2 "Cleaning up all APT files"
 	rm -f $1/var/lib/apt/cdroms.list~
 	rm -rf $1/var/lib/apt/lists/
@@ -413,7 +426,7 @@ function cleanup_apt_all() {
 	mkdir -p $1/var/cache/apt/archives/partial
 }
 
-function cleanup_log_all() {
+function cleanup_log_all {
 	show_verbose 2 "Cleaning up log files"
 	logfiles="$(find $1/var/log -name '*.[0-9]*')"
 	logfiles="$logfiles $(find $1/var/log -name '*.gz')"
@@ -427,18 +440,18 @@ function cleanup_log_all() {
 	done
 }
 
-function cleanup_history() {
+function cleanup_history {
 	show_verbose 2 "Removing history files of user root"
 	rm -f $1/root/.*_history
 }
 
-function cleanup_fixed_devices() {
+function cleanup_fixed_devices {
 	show_verbose 2 "Cleaning up persistent device assignments"
 	rm -f $1/etc/udev/rules.d/70-persistent-cd.rules
 	rm -f $1/etc/udev/rules.d/70-persistent-net.rules
 }
 
-function cleanup_all() {
+function cleanup_all {
 	cleanup_apt_cache $1
 	cleanup_apt_all $1
 	cleanup_log_all $1
@@ -446,12 +459,12 @@ function cleanup_all() {
 	cleanup_fixed_devices $1
 }
 
-function cleanup_environment() {
+function cleanup_environment {
 	show_verbose 1 "Cleaning up installation environment..."
 	cleanup_all "${TARGET}/chroot"
 }
 
-function verify_environment() {
+function verify_environment {
 	if [ -z "$1" ]; then
 		TESTPATH=${TARGET}
 	else
@@ -475,14 +488,14 @@ function verify_environment() {
 	return 0
 }
 
-function test_prereq() {
+function test_prereq {
 	if [ -z $(which debootstrap) ]; then
 		show_error "Package debootstrap not installed."
 		exit 1
 	fi
 }
 
-function call_hook() {
+function call_hook {
 	if [ -z "$1" ]; then
 		return 0
 	fi
@@ -494,7 +507,7 @@ function call_hook() {
 	fi
 }
 
-function call_chroot_hook() {
+function call_chroot_hook {
 	if [ -z "$1" ]; then
 		return 0
 	fi
@@ -510,7 +523,7 @@ function call_chroot_hook() {
 	fi
 }
 
-function apply_customizations() {
+function apply_customizations {
 	CUST_SUBDIR=${1:-files}
 	KEYS_SUBDIR=${2:-install}
 	show_verbose 1 "Applying customizations to the target installation environment..."
@@ -524,8 +537,8 @@ function apply_customizations() {
 		show_verbose 2 "Processing file deletion list ${CUST_SUBDIR}.remove"
 		xargs -r -a "${TARGET}/${CUST_SUBDIR}.remove" chroot "${TARGET}/chroot" rm -rf
 	fi
-	# make sure the essential files are existing
-	create_minimal_files
+	# make sure the essential files are existing and OK
+	adjust_essential_files
 	# install trusted keys from the template, if provided
 	if [ -d "${TARGET}/${KEYS_SUBDIR}" ]; then
 		show_verbose 2 "Installing supplied signing keys from '${KEYS_SUBDIR}'"
@@ -548,7 +561,7 @@ function apply_customizations() {
 	call_hook post_customization
 }
 
-function process_locales() {
+function process_locales {
 	show_verbose 1 "(Re)initalizing system locales..."
 	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
 		# ubuntu
@@ -566,44 +579,192 @@ function process_locales() {
 	fi
 }
 
-function create_minimal_files() {
-	# locale
-	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
-		# ubuntu
-		if [ ! -f "${TARGET}/chroot/var/lib/locales/supported.d/local" ]; then
-			echo -e "en_US.UTF-8 UTF-8" > "${TARGET}/chroot/var/lib/locales/supported.d/local"
+function activate_minimal_locale {
+	if [ ! -f "${1}" ]; then
+		# create minimal file if it does not exist
+		echo "en_US.UTF-8 UTF-8" > "${1}"
+	elif [ $(grep '^[^#].*$' "${1}"  | grep -c -v '^[[:space:]]*$') -eq 0 ]; then
+		# no active line in file. Try to activate en_US.UTF-8
+		sed -i -e 's/^#[[:space:]]*\(en_US.UTF-8\)/\1/' "${1}"
+		if [ $(grep '^[^#].*$' "${1}"  | grep -c -v '^[[:space:]]*$') -eq 0 ]; then
+			# still no active line. append en_US.UTF8
+			echo "en_US.UTF-8 UTF-8" >> "${1}"
 		fi
-	else
-		if [ ! -f "${TARGET}/chroot/etc/locale.gen" ]; then
-			echo -e "en_US.UTF-8 UTF-8" > "${TARGET}/chroot/etc/locale.gen"
-		fi
-		if [ ! -f "${TARGET}/chroot/etc/default/locale" ]; then
-			echo "#  File generated by update-locale" > "${TARGET}/chroot/etc/default/locale"
-			echo "LANG=\"en_US.UTF-8\"" >> "${TARGET}/chroot/etc/default/locale"
-			echo "LANGUAGE=\"en_US:en\"" >> "${TARGET}/chroot/etc/default/locale"
-		fi
-	fi
-	# hostname
-	if [ ! -f "${TARGET}/chroot/etc/hostname" ]; then
-		echo $UIC_SRCNAME > "${TARGET}/chroot/etc/hostname"
-	fi
-	# dns resolution
-	if [ ! -f "${TARGET}/chroot/etc/resolv.conf" ]; then
-		echo -e "nameserver 208.67.222.222\nnameserver 208.67.220.220" > "${TARGET}/chroot/etc/resolv.conf"
-	fi
-	# file system table
-	if [ ! -f "${TARGET}/chroot/etc/fstab" ]; then
-		echo -e "# /etc/fstab: static file system information." > "${TARGET}/chroot/etc/fstab"
-		echo -e "#" >> "${TARGET}/chroot/etc/fstab"
-		echo -e "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>" >> "${TARGET}/chroot/etc/fstab"
-		echo -e "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
-		echo -e "" >> "${TARGET}/chroot/etc/fstab"
-		echo -e "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
-		echo -e "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0" >> "${TARGET}/chroot/etc/fstab"
 	fi
 }
 
-function get_filtered_repository() {
+function generate_minimal_resolver {
+	rm -f "${TARGET}/chroot/etc/resolv.conf"
+	for TEMPVAR in ${UIC_PUBLICDNS:-8.8.8.8 8.8.4.4}; do
+		echo "nameserver ${TEMPVAR}" >> "${TARGET}/chroot/etc/resolv.conf"
+	done
+	unset TEMPVAR
+}
+
+function generate_package_sources {
+	TMPFILE=$(mktemp)
+	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
+		# ubuntu
+		( cat << EOFF
+# See http://help.ubuntu.com/community/UpgradeNotes for how to upgrade to
+# newer versions of the distribution.
+
+## Primary distribution source
+deb ${UIC_REPOSITORY} ${UIC_RELEASE} main universe
+#deb-src ${UIC_REPOSITORY} ${UIC_RELEASE} main universe
+
+## Major bug fix updates produced after the final release of the
+## distribution.
+deb ${UIC_REPOSITORY} ${UIC_RELEASE}-updates main universe
+#deb-src ${UIC_REPOSITORY} ${UIC_RELEASE}-updates main universe
+EOFF
+		) > ${TMPFILE}
+		if [ $(expr match "${UIC_REPOSITORY}" 'http:.*\.ubuntu.com/.*') -gt 0 ]; then
+			# it's really ubuntu - add also the security repo
+			( cat << EOFF
+## Security updates
+deb http://security.ubuntu.com/ubuntu ${UIC_RELEASE}-security main universe
+#deb-src http://security.ubuntu.com/ubuntu ${UIC_RELEASE}-security main universe
+EOFF
+			) >> ${TMPFILE}
+		fi
+	else
+		# it's something debian style....
+		( cat << EOFF
+#############################################################
+################### OFFICIAL DEBIAN REPOS ###################
+#############################################################
+
+###### Debian Main Repos
+deb ${UIC_REPOSITORY} ${UIC_RELEASE} main contrib non-free
+# deb-src ${UIC_REPOSITORY} ${UIC_RELEASE} main contrib non-free
+
+###### Debian Update Repos
+EOFF
+		) > ${TMPFILE}
+		if [ $(expr match "${UIC_REPOSITORY}" 'http:.*\.debian.org/.*') -gt 0 ]; then
+			# it's really debian - add also the security repo
+			( cat << EOFF
+deb http://security.debian.org/ ${UIC_RELEASE}/updates main contrib non-free
+# deb-src http://security.debian.org/ ${UIC_RELEASE}/updates main contrib non-free
+EOFF
+			) >> ${TMPFILE}
+		fi
+		( cat << EOFF
+deb ${UIC_REPOSITORY} ${UIC_RELEASE}-updates main contrib non-free
+# deb-src ${UIC_REPOSITORY} ${UIC_RELEASE}-updates main contrib non-free
+deb ${UIC_REPOSITORY} ${UIC_RELEASE}-proposed-updates main contrib non-free
+# deb-src ${UIC_REPOSITORY} ${UIC_RELEASE}-proposed-updates main contrib non-free
+EOFF
+		) >> ${TMPFILE}
+	fi
+	mv "${TMPFILE}" "${TARGET}/chroot/etc/apt/sources.list"
+	unset TMPFILE
+}
+
+function prepare_host_parts {
+	HOSTNAME_HOST=$(expr match "${UIC_HOSTNAME}" '\([^.]*\)')
+	HOSTNAME_DOMAIN=$(expr match "${UIC_HOSTNAME}" '[^.]*\.\(.*\)')
+	[ -z "${HOSTNAME_HOST}" ]	&& HOSTNAME_HOST="${UIC_SRCNAME:-uic}-$(date +%s)"
+	[ -z "${HOSTNAME_DOMAIN}" ]	&& HOSTNAME_DOMAIN="${UIC_DEFAULTDOMAIN:-example.com}"
+}
+
+function extract_host_parts {
+	HOSTNAME_HOST=
+	HOSTNAME_DOMAIN=
+	if [ -f "${TARGET}/chroot/etc/hostname" ]; then
+		# try to extract hostname and domain from /etc/hostname
+		HOSTNAME_HOST=$(expr match "$(cat ${TARGET}/chroot/etc/hostname)" '\([^.]*\)')
+		HOSTNAME_DOMAIN=$(expr match "$(cat ${TARGET}/chroot/etc/hostname)" '[^.]*\.\(.*\)')
+		HOSTNAME_DOMAIN=${HOSTNAME_DOMAIN:-$(expr match "${UIC_HOSTNAME}" '[^.]*\.\(.*\)')}
+	fi
+	if [ -z "${HOSTNAME_DOMAIN}" -a -f "${TARGET}/chroot/etc/hosts" ]; then
+		# try to extract the domain name from /etc/hosts
+		for TEMPVAR in $(grep '^[[:space:]]*127.0.1.1' "${TARGET}/chroot/etc/hosts" | awk '{ print $2,$3,$4,$5 }'); do
+			HOSTNAME_DOMAIN=$(expr match ${TEMPVAR} '[^.]*\.\(.*\)')
+			if [ -n "${HOSTNAME_DOMAIN}" ]; then
+				break;
+			fi
+		done
+		unset TEMPVAR
+	fi
+	# if a part is not found, default it....
+	[ -z "${HOSTNAME_HOST}" ]	&& HOSTNAME_HOST="${UIC_SRCNAME:-uic}-$(date +%s)"
+	[ -z "${HOSTNAME_DOMAIN}" ]	&& HOSTNAME_DOMAIN="${UIC_DEFAULTDOMAIN:-example.com}"
+}
+
+function adjust_essential_files {
+	# locale configuration
+	if [ $(grep -s -i ubuntu "${TARGET}/chroot/etc/lsb-release" | wc -l) != "0" ]; then
+		# ubuntu
+		activate_minimal_locale "${TARGET}/chroot/var/lib/locales/supported.d/local"
+	else
+		activate_minimal_locale "${TARGET}/chroot/etc/locale.gen"
+	fi
+	if [ ! -f "${TARGET}/chroot/etc/default/locale" ]; then
+		echo "#  File generated by update-locale" > "${TARGET}/chroot/etc/default/locale"
+	fi
+	if [ $(grep -c '^[[:space:]]*LANG[[:space:]]*=[[:space:]]*\"..*\"' "${TARGET}/chroot/etc/default/locale") -eq 0 ]; then
+		echo "LANG=\"en_US.UTF-8\"" >> "${TARGET}/chroot/etc/default/locale"
+	fi
+	if [ $(grep -c '^[[:space:]]*LANGUAGE[[:space:]]*=[[:space:]]*\"..*\"' "${TARGET}/chroot/etc/default/locale") -eq 0 ]; then
+		echo "LANGUAGE=\"en_US:en\"" >> "${TARGET}/chroot/etc/default/locale"
+	fi
+	# hostname
+	if [ ! -f "${TARGET}/chroot/etc/hostname" ]; then
+		# no host file in place - create one
+		prepare_host_parts
+		echo ${HOSTNAME_HOST} > "${TARGET}/chroot/etc/hostname"
+	elif [ -n "${UIC_HOSTNAME}" ]; then
+		# if specified in template, then overwrite it
+		prepare_host_parts
+		echo ${HOSTNAME_HOST} > "${TARGET}/chroot/etc/hostname"
+	fi
+	# hosts
+	extract_host_parts
+	if [ ! -f "${TARGET}/chroot/etc/hosts" ]; then
+		# no hosts file found - create one
+		printf "127.0.0.1\tlocalhost\n" >> "${TARGET}/chroot/etc/hosts"
+		printf "127.0.1.1\t${HOSTNAME_HOST}.${HOSTNAME_DOMAIN}\t${HOSTNAME_HOST}\n" >> "${TARGET}/chroot/etc/hosts"
+		printf "::1\t\tlocalhost ip6-localhost ip6-loopback\n" >> "${TARGET}/chroot/etc/hosts"
+		printf "ff02::1\tip6-allnodes\n" >> "${TARGET}/chroot/etc/hosts"
+		printf "ff02::2\tip6-allrouters\n" >> "${TARGET}/chroot/etc/hosts"
+	elif [ $(grep -c '^[[:space:]]*127.0.1.1' "${TARGET}/chroot/etc/hosts") -eq 0 ]; then
+		# no domain part specified - add it
+		printf "127.0.1.1\t${HOSTNAME_HOST}\t${HOSTNAME_HOST}.${HOSTNAME_DOMAIN}\n" >> "${TARGET}/chroot/etc/hosts"
+	else
+		# make sure the correct values are there
+		sed -i -e "s/^[[:space:]]*127\.0\.1\.1.*$/127.0.1.1\t${HOSTNAME_HOST}.${HOSTNAME_DOMAIN}\t${HOSTNAME_HOST}/" "${TARGET}/chroot/etc/hosts"
+	fi
+	# dns resolution
+	if [ ! -f "${TARGET}/chroot/etc/resolv.conf" ]; then
+		# no resolver found - create one
+		generate_minimal_resolver
+	elif diff "/etc/resolv.conf" "${TARGET}/chroot/etc/resolv.conf" > /dev/null; then
+		# resolver is taken from the host - replace with a default one
+		generate_minimal_resolver
+	fi
+	# file system table
+	if [ ! -f "${TARGET}/chroot/etc/fstab" ]; then
+		printf "# /etc/fstab: static file system information.\n" > "${TARGET}/chroot/etc/fstab"
+		printf "#\n" >> "${TARGET}/chroot/etc/fstab"
+		printf "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>\n" >> "${TARGET}/chroot/etc/fstab"
+		printf "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
+		printf "\n" >> "${TARGET}/chroot/etc/fstab"
+		printf "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
+		printf "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
+	fi
+	# package sources
+	if [ ! -f "${TARGET}/chroot/etc/apt/sources.list" ]; then
+		# no package sources found - create one
+		generate_package_sources
+	elif [ "$(cat ${TARGET}/chroot/etc/apt/sources.list)" = "deb $(get_filtered_repository) ${UIC_RELEASE} main" ]; then
+		# package sources autogenerated by debootstrap - replace with a default one a default one
+		generate_package_sources
+	fi
+}
+
+function get_filtered_repository {
 	if [ -z "${UIC_APTPROXY}" ]; then
 		echo ${UIC_REPOSITORY}
 	else
@@ -611,20 +772,20 @@ function get_filtered_repository() {
 	fi
 }
 
-function init_apt_proxy() {
+function init_apt_proxy {
 	if [ -z "${UIC_APTPROXY}" ]; then
 		return 0
 	fi
 	echo -e "Acquire::http { Proxy \"http://${UIC_APTPROXY}\"; };" > "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy"
 }
 
-function exit_apt_proxy() {
+function exit_apt_proxy {
 	if [ -f "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy" ]; then
 		rm -f "${TARGET}/chroot/etc/apt/apt.conf.d/02uicproxy"
 	fi
 }
 
-function add_ppa() {
+function add_ppa {
 	PPA="$1"
 	if [ -z "$PPA" ]; then
 		show_verbose 1 "No PPA specified"
