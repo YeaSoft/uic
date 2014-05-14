@@ -17,7 +17,7 @@ SCRIPTNAME=$(basename "${SCRIPTFULL}")
 SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.4'
+VERSION='0.16.5'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -662,6 +662,22 @@ EOFF
 	unset TMPFILE
 }
 
+function generate_fstab {
+	TMPFILE=$(mktemp)
+	( cat << EOFF
+# /etc/fstab: static file system information.
+#
+# <file system>			<mount point>	<type>	<options>			<dump>	<pass>
+proc				/proc		proc	defaults			0	0
+
+tmpfs				/tmp		tmpfs	defaults,noatime		0	0
+tmpfs				/var/tmp	tmpfs	defaults,noatime		0	0
+EOFF
+	) > "${TMPFILE}"
+	mv "${TMPFILE}" "${TARGET}/chroot/etc/fstab"
+	unset TMPFILE
+}
+
 function prepare_host_parts {
 	HOSTNAME_HOST=$(expr match "${UIC_HOSTNAME}" '\([^.]*\)')
 	HOSTNAME_DOMAIN=$(expr match "${UIC_HOSTNAME}" '[^.]*\.\(.*\)')
@@ -745,14 +761,9 @@ function adjust_essential_files {
 		generate_minimal_resolver
 	fi
 	# file system table
-	if [ ! -f "${TARGET}/chroot/etc/fstab" ]; then
-		printf "# /etc/fstab: static file system information.\n" > "${TARGET}/chroot/etc/fstab"
-		printf "#\n" >> "${TARGET}/chroot/etc/fstab"
-		printf "# <file system>\t\t\t<mount point>\t<type>\t<options>\t\t\t<dump>\t<pass>\n" >> "${TARGET}/chroot/etc/fstab"
-		printf "proc\t\t\t\t/proc\t\tproc\tdefaults\t\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
-		printf "\n" >> "${TARGET}/chroot/etc/fstab"
-		printf "tmpfs\t\t\t\t/tmp\t\ttmpfs\tdefaults,noatime\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
-		printf "tmpfs\t\t\t\t/var/tmp\ttmpfs\tdefaults,noatime\t\t0\t0\n" >> "${TARGET}/chroot/etc/fstab"
+	if [ ! -f "${TARGET}/files/etc/fstab" ]; then
+		# no custom filesystem table found - create a default one
+		generate_fstab
 	fi
 	# package sources
 	if [ ! -f "${TARGET}/chroot/etc/apt/sources.list" ]; then
