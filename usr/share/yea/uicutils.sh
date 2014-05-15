@@ -667,11 +667,11 @@ function generate_fstab {
 	( cat << EOFF
 # /etc/fstab: static file system information.
 #
-# <file system>			<mount point>	<type>	<options>			<dump>	<pass>
-proc				/proc		proc	defaults			0	0
+# <file system>			<mount point>	<type>		<options>			<dump>	<pass>
+proc				/proc		proc		defaults			0	0
 
-tmpfs				/tmp		tmpfs	defaults,noatime		0	0
-tmpfs				/var/tmp	tmpfs	defaults,noatime		0	0
+tmpfs				/tmp		tmpfs		defaults,noatime		0	0
+tmpfs				/var/tmp	tmpfs		defaults,noatime		0	0
 EOFF
 	) > "${TMPFILE}"
 	mv "${TMPFILE}" "${TARGET}/chroot/etc/fstab"
