@@ -10,7 +10,7 @@ Homepage: http://www.yeasoft.com/site/projects:uic
 
 Package: uic
 Architecture: all
-Depends: ${misc:Depends}, debootstrap, wget
+Depends: ${misc:Depends}, realpath, debootstrap, wget
 Description: The Unified Installation Creator
  uic is a toolkit build on top of debootstrap that permits
  to automate the creation of customized command line Linux

@@ -8,16 +8,17 @@
 #####################
 # Internal Variables
 # generic script helpers
-case "$0" in
-/*)  SCRIPTFULL="$0";;
-./*) SCRIPTFULL="${PWD}/${0#./}";;
-*)   SCRIPTFULL="${PWD}/${0}";;
-esac
+#case "$0" in
+#/*)  SCRIPTFULL="$0";;
+#./*) SCRIPTFULL="${PWD}/${0#./}";;
+#*)   SCRIPTFULL="${PWD}/${0}";;
+#esac
+SCRIPTFULL=$(realpath "${0}")
 SCRIPTNAME=$(basename "${SCRIPTFULL}")
 SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.5'
+VERSION='0.16.6'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -161,7 +162,9 @@ function disable_dpkg_options {
 
 function umount_special {
 	for MOUNT_POINT in ${SPECIALFSU}; do
+		show_verbose 4 "Unmounting ${TARGET}/chroot${MOUNT_POINT}"
 		if grep "${TARGET}/chroot${MOUNT_POINT}" /proc/mounts > /dev/null; then
+			show_verbose 4 "REALLY Unmounting ${TARGET}/chroot${MOUNT_POINT}"
 			umount ${TARGET}/chroot${MOUNT_POINT}
 		fi
 	done
@@ -269,31 +272,23 @@ function uic_require {
 function find_environment {
 	if [ $# -lt 1 ]; then
 		# no environment name specified. It must be here....
-		test_environment "$(pwd)"
 		TARGET="$(pwd)"
 	elif [ "${1:0:1}" = "/" ]; then
 		# absolute path specified
-		test_environment "$1"
-		TARGET="$1"
+		TARGET="$(realpath -s $1)"
 	elif [ -d "$(pwd)/$1" ]; then
 		# specified environment under the current directory?
-		test_environment "$(pwd)/$1"
-		TARGET="$(pwd)/$1"
+		TARGET="$(realpath -s $(pwd)/$1)"
 	elif [ -d "${UIC_WORKDIR}/$1" ]; then
 		# specified environment under the default working directory?
-		test_environment "${UIC_WORKDIR}/$1"
-		TARGET="${UIC_WORKDIR}/$1"
+		TARGET="$(realpath -s ${UIC_WORKDIR}/$1)"
 	else
 		show_error "Environment $1 does not exist"
 		exit 2
 	fi
-	TARGETNAME=$(basename ${TARGET})
-	TARGETPATH=$(dirname ${TARGET})
-	if [ "${TARGETPATH}" = "/" ]; then
-		TARGET="/${TARGETNAME}"
-	else
-		TARGET="${TARGETPATH}/${TARGETNAME}"
-	fi
+	test_environment "${TARGET}"
+	TARGETNAME="$(basename ${TARGET})"
+	TARGETPATH="$(dirname ${TARGET})"
 }
 
 function test_environment {

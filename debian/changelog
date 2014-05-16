@@ -1,3 +1,10 @@
+uic (0.16.6-1) unstable; urgency=low
+
+  * Fix: Special file systems in environment are now unmounted with
+    any target path specification on the commandline (Closes #10)
+
+ -- Leo Moll <leo.moll@yeasoft.com>  Fri, 16 May 2014 15:05:21 +0200
+
 uic (0.16.5-1) unstable; urgency=low
 
   * Feature: Support encrypted passwords in UIC_ROOTPASSWORD by
