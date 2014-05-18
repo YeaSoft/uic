@@ -20,8 +20,8 @@ After two years of internal use, the project is now getting more mature and
 therefore the project will be maintained on GitHub starting from now.
 
 
-What's new in Version 0.16.6
-----------------------------
+What's new in Version 0.16.6 (2014-05-16)
+-----------------------------------------
 
   * Feature: Support encrypted passwords in `UIC_ROOTPASSWORD` by
     specifying `UIC_ROOTPASSWORD=SHADOW:$6$HnFcw.Hb$G5.....`
