@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140927
 # This script purges packages from a
 # unified installation environment
 
@@ -60,7 +60,7 @@ PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,y,R,C,I --longoptions help,
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
@@ -68,7 +68,7 @@ while true; do
 	-R|--remove)			PURGE=; shift;;
 	-y|--yes)			APTPARAMS="${APTPARAMS} --yes"; shift;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -87,8 +87,8 @@ if [ -f uictpl.conf -a -d files ]; then
 	find_environment
 	verify_environment
 else
-	find_environment $1
-	verify_environment $1
+	find_environment ${1}
+	verify_environment ${1}
 	# eat the environment parameter
 	shift;
 fi
@@ -100,10 +100,7 @@ test_environment_empty
 test_mountinuse
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "${TARGET}/uictpl.conf"
-[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
-test_environment_configuration
+load_environment_configuration
 
 # check builder compatibility
 test_builder_compatibility
@@ -130,6 +127,7 @@ call_chroot_hook chroot_pre_installation
 init_apt_proxy
 
 install_ppas
+install_uic_tag
 
 update_sources
 update_system

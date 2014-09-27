@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140926
+# Version 20140927
 # This script produces the deliverables of a
 # unified installation environment
 
@@ -50,6 +50,19 @@ environment directory. Otherwise it can be:
 - a path to the intended environment directory relative to /usr/src
 
 EOF
+}
+
+function load_build_libraries {
+	if [ -d "${TARGET}/build" ]; then
+		OLDCWD="$(pwd)"; cd "${TARGET}/build"
+		for BUILD_LIB in build_lib_*; do
+			if [ -x ${BUILD_LIB} ]; then
+				show_verbose 2 "Loading custom build library ${BUILD_LIB}"
+				source ${BUILD_LIB}
+			fi
+		done
+		cd "${OLDCWD}"; unset OLDCWD
+	fi
 }
 
 function list_targets {
@@ -349,14 +362,14 @@ PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,l,C,b: --longoptions help,v
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-l|--list)			LIST_TARGETS=1; shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
-	-b|--build-target)		BUILD_TARGETS="$(echo "$2" | tr , " ")"; shift 2;;
+	-b|--build-target)		BUILD_TARGETS="$(echo "${2}" | tr , " ")"; shift 2;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -371,15 +384,13 @@ esac
 test_prereq
 
 # preflights checks and destination detection
-find_environment $1
-verify_environment $1
+find_environment ${1}
+verify_environment ${1}
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uictpl.conf"
-[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
-test_environment_configuration
+load_environment_configuration
 
+# list targets
 if [ ${LIST_TARGETS} -gt 0 ]; then
 	list_targets
 	exit $?
@@ -394,17 +405,8 @@ test_environment_empty
 # checks if nobody other is working in the environment
 test_mountinuse
 
-# load custom build targets
-if [ -d "${TARGET}/build" ]; then
-	OLDCWD="$(pwd)"; cd "${TARGET}/build"
-	for BUILD_LIB in build_lib_*; do
-		if [ -x ${BUILD_LIB} ]; then
-			show_verbose 2 "Loading custom build library ${BUILD_LIB}"
-			source ${BUILD_LIB}
-		fi
-	done
-	cd "${OLDCWD}"; unset OLDCWD
-fi
+# load custom build libraries
+load_build_libraries
 
 # play the music
 show_verbose 2 "Preparing chroot special filesystems..."

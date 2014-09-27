@@ -5,6 +5,8 @@ uic_create - creates an installation in the specified installation environment
 .SH SYNOPSIS
 .SP
 .B uic_create [\-hvF] [
+.I -V <variant>
+.B ] [
 .I <environment_path>
 .B ]
 
@@ -51,6 +53,13 @@ overwrite by default existing installations found in the destination directory,
 this option permits to execute the command also if there is already an
 installation in place.
 
+.TP
+.B \-l, \-\-list
+show the list of available variants
+
+.TP
+.B \-V, \-\-variant <variant>
+create the installation using the specified variant
 
 .SH EXAMPLES
 
