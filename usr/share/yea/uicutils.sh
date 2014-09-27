@@ -18,7 +18,7 @@ SCRIPTNAME=$(basename "${SCRIPTFULL}")
 SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.99'
+VERSION='0.16.9'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -546,7 +546,7 @@ function apply_customizations {
 		mkdir -p "${TARGET}/chroot/aptkeys"
 		mount -o bind "${TARGET}/${KEYS_SUBDIR}" "${TARGET}/chroot/aptkeys"
 		for KEYFILE in $(find "${TARGET}/${KEYS_SUBDIR}" -name '*.key' -printf " %f"); do
-			chroot "${TARGET}/chroot" apt-key add /aptkeys/${KEYFILE}
+			chroot "${TARGET}/chroot" apt-key add /aptkeys/${KEYFILE} > /dev/null
 			RESULT=$?
 			if [ ${RESULT} -ne 0 ]; then
 				umount "${TARGET}/chroot/aptkeys"
