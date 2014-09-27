@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140926
 # This script produces the deliverables of a
 # unified installation environment
 
@@ -73,51 +73,16 @@ function build_target {
 	UIC_BUILDNAME=${1#${UIC_BUILDTYPE}:}
 	shift
 	[ -d "${TARGET}/output" ] || mkdir -p "${TARGET}/output"
-	case "${UIC_BUILDTYPE}" in
-	"none")		;;
-	"kernel")	build_target_kernel $@;;
-	"initrd")	build_target_initrd $@;;
-	"squashfs")	build_target_squashfs $@;;
-	"install")	build_target_install $@;;
-	"report")	build_target_report $@;;
-	"archive")	build_target_archive $@;;
-	*)		if [ -x "${TARGET}/build/build_target_${UIC_BUILDTYPE}" ]; then
-				show_verbose 2 "Calling custom buildscript build_target_${UIC_BUILDTYPE}..."
-				source "${TARGET}/build/build_target_${UIC_BUILDTYPE}"
-			else
-				show_error "Build type ${UIC_BUILDTYPE} unknown"
-				exit 2
-			fi
-			;;
-	esac
+	if [ "$(type -t build_target_${UIC_BUILDTYPE})" = "function" ]; then
+		build_target_${UIC_BUILDTYPE} $@
+	elif [ -x "${TARGET}/build/build_target_${UIC_BUILDTYPE}" ]; then
+		show_verbose 2 "Calling custom DEPRECATED buildscript build_target_${UIC_BUILDTYPE}..."
+		source "${TARGET}/build/build_target_${UIC_BUILDTYPE}"
+	else
+		show_error "Build target ${UIC_BUILDTYPE} unknown"
+		exit 2
+	fi
 	return 0
-}
-
-
-function build_target_TEMPLATE {
-	# initialize variables
-	UIC_OUTPUTFILE="${UIC_BUILDNAME}."
-	# parse parameters
-	PARSER=$(getopt --name build_target_TEMPLATE --options o: --longoptions output: -- "$@")
-	test_getopt
-	eval set -- "${PARSER}"
-	while true; do
-		case "$1" in
-		-o|--output)	UIC_OUTPUTFILE="${2}"
-				shift 2
-				;;
-		--)		shift; break;;
-		esac
-	done
-
-	# perform the build step
-	call_hook pre_build_TEMPLATE
-	call_chroot_hook chroot_pre_build_TEMPLATE
-
-	cleanup_environment
-
-	call_chroot_hook chroot_post_build_TEMPLATE
-	call_hook post_build_TEMPLATE
 }
 
 function build_target_archive {
@@ -129,7 +94,7 @@ function build_target_archive {
 	UIC_COMPEXT=".tar"
 	UIC_VSUFFIX=
 	# parse parameters
-	PARSER=$(getopt --name build_target_archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
+	PARSER=$(getopt --name uic_build:archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while [ $# -gt 0 ]; do
@@ -181,7 +146,7 @@ function build_target_report {
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.package-list"
 	UIC_TERSE=0
 	# parse parameters
-	PARSER=$(getopt --name build_target_report --options o:,t --longoptions output:,terse -- "$@")
+	PARSER=$(getopt --name uic_build:report --options o:,t --longoptions output:,terse -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -215,7 +180,7 @@ function build_target_install {
 	# initialize variables
 	UIC_OUTPUTPATH=
 	# parse parameters
-	PARSER=$(getopt --name build_target_install --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name uic_build:install --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -252,7 +217,7 @@ function build_target_kernel {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.vmlinuz"
 	# parse parameters
-	PARSER=$(getopt --name build_target_kernel --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name uic_build:kernel --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -286,7 +251,7 @@ function build_target_initrd {
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.initrd"
 	UIC_CONFIGFILE="${TARGET}/build/${UIC_BUILDNAME}.initramfs.conf"
 	# parse parameters
-	PARSER=$(getopt --name build_target_initrd --options o:,c: --longoptions output:,config: -- "$@")
+	PARSER=$(getopt --name uic_build:initrd --options o:,c: --longoptions output:,config: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -325,7 +290,7 @@ function build_target_squashfs {
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.squashfs"
 	UIC_EXCLUDEFILE="${TARGET}/build/${UIC_BUILDNAME}.squash.exclude"
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
+	PARSER=$(getopt --name uic_build:squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -428,6 +393,18 @@ test_environment_empty
 
 # checks if nobody other is working in the environment
 test_mountinuse
+
+# load custom build targets
+if [ -d "${TARGET}/build" ]; then
+	OLDCWD="$(pwd)"; cd "${TARGET}/build"
+	for BUILD_LIB in build_lib_*; do
+		if [ -x ${BUILD_LIB} ]; then
+			show_verbose 2 "Loading custom build library ${BUILD_LIB}"
+			source ${BUILD_LIB}
+		fi
+	done
+	cd "${OLDCWD}"; unset OLDCWD
+fi
 
 # play the music
 show_verbose 2 "Preparing chroot special filesystems..."
