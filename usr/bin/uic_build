@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140928
 # This script produces the deliverables of a
 # unified installation environment
 
@@ -52,6 +52,19 @@ environment directory. Otherwise it can be:
 EOF
 }
 
+function load_build_libraries {
+	if [ -d "${UIC_WP_BUILD}" ]; then
+		OLDCWD="$(pwd)"; cd "${UIC_WP_BUILD}"
+		for BUILD_LIB in build_lib_*; do
+			if [ -x ${BUILD_LIB} ]; then
+				show_verbose 2 "Loading custom build library ${BUILD_LIB}"
+				source ${BUILD_LIB}
+			fi
+		done
+		cd "${OLDCWD}"; unset OLDCWD
+	fi
+}
+
 function list_targets {
 	if [ ${#UIC_TARGET[@]} -eq 0 ]; then
 		echo "There are no build targets defined for ${TARGETNAME}"
@@ -72,64 +85,29 @@ function build_target {
 	UIC_BUILDTYPE=$(expr match "$1" '\([^:]*\)')
 	UIC_BUILDNAME=${1#${UIC_BUILDTYPE}:}
 	shift
-	[ -d "${TARGET}/output" ] || mkdir -p "${TARGET}/output"
-	case "${UIC_BUILDTYPE}" in
-	"none")		;;
-	"kernel")	build_target_kernel $@;;
-	"initrd")	build_target_initrd $@;;
-	"squashfs")	build_target_squashfs $@;;
-	"install")	build_target_install $@;;
-	"report")	build_target_report $@;;
-	"archive")	build_target_archive $@;;
-	*)		if [ -x "${TARGET}/build/build_target_${UIC_BUILDTYPE}" ]; then
-				show_verbose 2 "Calling custom buildscript build_target_${UIC_BUILDTYPE}..."
-				source "${TARGET}/build/build_target_${UIC_BUILDTYPE}"
-			else
-				show_error "Build type ${UIC_BUILDTYPE} unknown"
-				exit 2
-			fi
-			;;
-	esac
+	[ -d "${UIC_WP_OUTPUT}" ] || mkdir -p "${UIC_WP_OUTPUT}"
+	if [ "$(type -t build_target_${UIC_BUILDTYPE})" = "function" ]; then
+		build_target_${UIC_BUILDTYPE} $@
+	elif [ -x "${UIC_WP_BUILD}/build_target_${UIC_BUILDTYPE}" ]; then
+		show_verbose 2 "Calling custom DEPRECATED buildscript build_target_${UIC_BUILDTYPE}..."
+		source "${UIC_WP_BUILD}/build_target_${UIC_BUILDTYPE}"
+	else
+		show_error "Build target ${UIC_BUILDTYPE} unknown"
+		exit 2
+	fi
 	return 0
-}
-
-
-function build_target_TEMPLATE {
-	# initialize variables
-	UIC_OUTPUTFILE="${UIC_BUILDNAME}."
-	# parse parameters
-	PARSER=$(getopt --name build_target_TEMPLATE --options o: --longoptions output: -- "$@")
-	test_getopt
-	eval set -- "${PARSER}"
-	while true; do
-		case "$1" in
-		-o|--output)	UIC_OUTPUTFILE="${2}"
-				shift 2
-				;;
-		--)		shift; break;;
-		esac
-	done
-
-	# perform the build step
-	call_hook pre_build_TEMPLATE
-	call_chroot_hook chroot_pre_build_TEMPLATE
-
-	cleanup_environment
-
-	call_chroot_hook chroot_post_build_TEMPLATE
-	call_hook post_build_TEMPLATE
 }
 
 function build_target_archive {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}"
-	UIC_EXCLUDEFILE="${TARGET}/build/${UIC_BUILDNAME}.tar.exclude"
+	UIC_EXCLUDEFILE="${UIC_WP_BUILD}/${UIC_BUILDNAME}.tar.exclude"
 	UIC_EXCLUDEOPT=
 	UIC_COMPOPT=
 	UIC_COMPEXT=".tar"
 	UIC_VSUFFIX=
 	# parse parameters
-	PARSER=$(getopt --name build_target_archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
+	PARSER=$(getopt --name uic_build:archive --options o:,e:,j,z,v --longoptions output:,exclude:,gzip,bzip2,version -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while [ $# -gt 0 ]; do
@@ -137,9 +115,9 @@ function build_target_archive {
 		-o|--output)	UIC_OUTPUTFILE="${2}"
 				shift 2
 				;;
-		-e|--exclude)	UIC_EXCLUDEFILE="${TARGET}/build/${2}"
+		-e|--exclude)	UIC_EXCLUDEFILE="${UIC_WP_BUILD}/${2}"
 				if [ ! -f "${UIC_EXCLUDEFILE}" ]; then
-					show_error "Exclude file $2 does not exist"
+					show_error "Exclude file ${2} does not exist"
 					exit 2
 				fi
 				shift 2
@@ -162,13 +140,13 @@ function build_target_archive {
 
 	cleanup_environment
 
-	show_verbose 1 "Create archive ${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT} in ${TARGET}/output..."
+	show_verbose 1 "Create archive ${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT} in ${UIC_WP_OUTPUT}..."
 	if [ -f "${UIC_EXCLUDEFILE}" ]; then
 		UIC_EXCLUDEOPT="--exclude-from=\"${UIC_EXCLUDEFILE}\""
 	fi
 	TEMP_MOUNT=$(mktemp -d)
-	mount -o bind "${TARGET}/chroot" "${TEMP_MOUNT}"
-	tar -cpf "${TARGET}/output/${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT}" ${UIC_COMPOPT} ${UIC_EXCLUDEOPT} -C "${TEMP_MOUNT}" .
+	mount -o bind "${UIC_WP_ROOTFS}" "${TEMP_MOUNT}"
+	tar -cpf "${UIC_WP_OUTPUT}/${UIC_OUTPUTFILE}${UIC_VSUFFIX}${UIC_COMPEXT}" ${UIC_COMPOPT} ${UIC_EXCLUDEOPT} -C "${TEMP_MOUNT}" .
 	umount "${TEMP_MOUNT}"
 	rmdir "${TEMP_MOUNT}"
 
@@ -181,7 +159,7 @@ function build_target_report {
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.package-list"
 	UIC_TERSE=0
 	# parse parameters
-	PARSER=$(getopt --name build_target_report --options o:,t --longoptions output:,terse -- "$@")
+	PARSER=$(getopt --name uic_build:report --options o:,t --longoptions output:,terse -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -200,11 +178,11 @@ function build_target_report {
 	call_hook pre_build_report
 	call_chroot_hook chroot_pre_build_report
 
-	show_verbose 1 "Creating packages report ${UIC_OUTPUTFILE} in ${TARGET}/output..."
+	show_verbose 1 "Creating packages report ${UIC_OUTPUTFILE} in ${UIC_WP_OUTPUT}..."
 	if [ $UIC_TERSE -gt 0 ]; then
-		chroot "${TARGET}/chroot" dpkg --get-selections | grep install > "${TARGET}/output/${UIC_OUTPUTFILE}"
+		chroot "${UIC_WP_ROOTFS}" dpkg --get-selections | grep install > "${UIC_WP_OUTPUT}/${UIC_OUTPUTFILE}"
 	else
-		chroot "${TARGET}/chroot" dpkg --list | grep ^ii > "${TARGET}/output/${UIC_OUTPUTFILE}"
+		chroot "${UIC_WP_ROOTFS}" dpkg --list | grep ^ii > "${UIC_WP_OUTPUT}/${UIC_OUTPUTFILE}"
 	fi
 
 	call_chroot_hook chroot_post_build_report
@@ -215,7 +193,7 @@ function build_target_install {
 	# initialize variables
 	UIC_OUTPUTPATH=
 	# parse parameters
-	PARSER=$(getopt --name build_target_install --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name uic_build:install --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -242,7 +220,7 @@ function build_target_install {
 	call_chroot_hook chroot_pre_build_install
 
 	show_verbose 1 "Installing ${TARGETNAME} to ${UIC_OUTPUTPATH}..."
-	cp -a ${VBPARAM} "${TARGET}/output/." "${UIC_OUTPUTPATH}/"
+	cp -a ${VBPARAM} "${UIC_WP_OUTPUT}/." "${UIC_OUTPUTPATH}/"
 
 	call_chroot_hook chroot_post_build_install
 	call_hook post_build_install
@@ -252,7 +230,7 @@ function build_target_kernel {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.vmlinuz"
 	# parse parameters
-	PARSER=$(getopt --name build_target_kernel --options o: --longoptions output: -- "$@")
+	PARSER=$(getopt --name uic_build:kernel --options o: --longoptions output: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -270,12 +248,12 @@ function build_target_kernel {
 
 	cleanup_environment
 
-	if [ ! -f "${TARGET}/chroot/vmlinuz" ]; then
+	if [ ! -f "${UIC_WP_ROOTFS}/vmlinuz" ]; then
 		show_error "No valid kernel found in the installation environment."
 		exit 2
 	fi
 	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
-	cp ${VBPARAM} "${TARGET}/chroot/vmlinuz" "${TARGET}/output/${UIC_OUTPUTFILE}"
+	cp ${VBPARAM} "${UIC_WP_ROOTFS}/vmlinuz" "${UIC_WP_OUTPUT}/${UIC_OUTPUTFILE}"
 
 	call_chroot_hook chroot_post_build_kernel
 	call_hook post_build_kernel
@@ -284,9 +262,9 @@ function build_target_kernel {
 function build_target_initrd {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.initrd"
-	UIC_CONFIGFILE="${TARGET}/build/${UIC_BUILDNAME}.initramfs.conf"
+	UIC_CONFIGFILE="${UIC_WP_BUILD}/${UIC_BUILDNAME}.initramfs.conf"
 	# parse parameters
-	PARSER=$(getopt --name build_target_initrd --options o:,c: --longoptions output:,config: -- "$@")
+	PARSER=$(getopt --name uic_build:initrd --options o:,c: --longoptions output:,config: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -294,7 +272,7 @@ function build_target_initrd {
 		-o|--output)	UIC_OUTPUTFILE="${2}"
 				shift 2
 				;;
-		-c|--config)	UIC_CONFIGFILE="${TARGET}/build/${2}"
+		-c|--config)	UIC_CONFIGFILE="${UIC_WP_BUILD}/${2}"
 				if [ ! -f "${UIC_CONFIGFILE}" ]; then
 					show_error "Configuration file $2 does not exist"
 					exit 2
@@ -312,9 +290,9 @@ function build_target_initrd {
 	cleanup_environment
 
 	show_verbose 1 "Creating ${UIC_OUTPUTFILE}..."
-	[ -f "${UIC_CONFIGFILE}" ] && cp ${VBPARAM} "${UIC_CONFIGFILE}" "${TARGET}/chroot/etc/initramfs-tools/initramfs.conf"
-	chroot "${TARGET}/chroot" /usr/sbin/update-initramfs -u -k all
-	cp  ${VBPARAM} "${TARGET}/chroot/initrd.img" "${TARGET}/output/${UIC_OUTPUTFILE}"
+	[ -f "${UIC_CONFIGFILE}" ] && cp ${VBPARAM} "${UIC_CONFIGFILE}" "${UIC_WP_ROOTFS}/etc/initramfs-tools/initramfs.conf"
+	chroot "${UIC_WP_ROOTFS}" /usr/sbin/update-initramfs -u -k all
+	cp  ${VBPARAM} "${UIC_WP_ROOTFS}/initrd.img" "${UIC_WP_OUTPUT}/${UIC_OUTPUTFILE}"
 
 	call_chroot_hook chroot_post_build_initrd
 	call_hook post_build_initrd
@@ -323,9 +301,9 @@ function build_target_initrd {
 function build_target_squashfs {
 	# initialize variables
 	UIC_OUTPUTFILE="${UIC_BUILDNAME}.squashfs"
-	UIC_EXCLUDEFILE="${TARGET}/build/${UIC_BUILDNAME}.squash.exclude"
+	UIC_EXCLUDEFILE="${UIC_WP_BUILD}/${UIC_BUILDNAME}.squash.exclude"
 	# parse parameters
-	PARSER=$(getopt --name build_target_squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
+	PARSER=$(getopt --name uic_build:squashfs --options o:,e: --longoptions output:,exclude: -- "$@")
 	test_getopt
 	eval set -- "${PARSER}"
 	while true; do
@@ -333,7 +311,7 @@ function build_target_squashfs {
 		-o|--output)	UIC_OUTPUTFILE="${2}"
 				shift 2
 				;;
-		-e|--exclude)	UIC_EXCLUDEFILE="${TARGET}/build/${2}"
+		-e|--exclude)	UIC_EXCLUDEFILE="${UIC_WP_BUILD}/${2}"
 				if [ ! -f "${UIC_EXCLUDEFILE}" ]; then
 					show_error "Exclude file $2 does not exist"
 					exit 2
@@ -345,7 +323,7 @@ function build_target_squashfs {
 	done
 
 	show_verbose 1 "Testing Prerequisites..."
-	if [ -z $(chroot "${TARGET}/chroot" which mksquashfs) ]; then
+	if [ -z $(chroot "${UIC_WP_ROOTFS}" which mksquashfs) ]; then
 		show_error "Package squashfs-tools not installed in the installation environment."
 		exit 1
 	fi
@@ -356,21 +334,21 @@ function build_target_squashfs {
 	cleanup_environment
 
 	show_verbose 1 "Preparing root filesystem..."
-	mkdir -p "${TARGET}/chroot/root/squash/fs"
-	mkdir -p "${TARGET}/chroot/root/squash/out"
-	[ -f ${UIC_EXCLUDEFILE} ] && cp ${VBPARAM} ${UIC_EXCLUDEFILE} "${TARGET}/chroot/root/squash/exclude"
-	[ -f ${UIC_EXCLUDEFILE} ] || touch "${TARGET}/chroot/root/squash/exclude"
-	echo "root/squash" >> "${TARGET}/chroot/root/squash/exclude"
-	mount -o bind "${TARGET}/chroot" "${TARGET}/chroot/root/squash/fs"
-	mount -o bind "${TARGET}/output" "${TARGET}/chroot/root/squash/out"
+	mkdir -p "${UIC_WP_ROOTFS}/root/squash/fs"
+	mkdir -p "${UIC_WP_ROOTFS}/root/squash/out"
+	[ -f ${UIC_EXCLUDEFILE} ] && cp ${VBPARAM} ${UIC_EXCLUDEFILE} "${UIC_WP_ROOTFS}/root/squash/exclude"
+	[ -f ${UIC_EXCLUDEFILE} ] || touch "${UIC_WP_ROOTFS}/root/squash/exclude"
+	echo "root/squash" >> "${UIC_WP_ROOTFS}/root/squash/exclude"
+	mount -o bind "${UIC_WP_ROOTFS}" "${UIC_WP_ROOTFS}/root/squash/fs"
+	mount -o bind "${UIC_WP_OUTPUT}" "${UIC_WP_ROOTFS}/root/squash/out"
 
 	show_verbose 1 "Create compressed squash filesystem..."
-	chroot  "${TARGET}/chroot" mksquashfs /root/squash/fs "/root/squash/out/${UIC_OUTPUTFILE}" -noappend -wildcards -ef /root/squash/exclude
+	chroot  "${UIC_WP_ROOTFS}" mksquashfs /root/squash/fs "/root/squash/out/${UIC_OUTPUTFILE}" -noappend -wildcards -ef /root/squash/exclude
 
 	show_verbose 1 "Cleaning up root filesystem..."
-	umount "${TARGET}/chroot/root/squash/fs"
-	umount "${TARGET}/chroot/root/squash/out"
-	rm -rf "${TARGET}/chroot/root/squash"
+	umount "${UIC_WP_ROOTFS}/root/squash/fs"
+	umount "${UIC_WP_ROOTFS}/root/squash/out"
+	rm -rf "${UIC_WP_ROOTFS}/root/squash"
 
 	call_chroot_hook chroot_post_build_squashfs
 	call_hook post_build_squashfs
@@ -384,14 +362,14 @@ PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,l,C,b: --longoptions help,v
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-l|--list)			LIST_TARGETS=1; shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
-	-b|--build-target)		BUILD_TARGETS="$(echo "$2" | tr , " ")"; shift 2;;
+	-b|--build-target)		BUILD_TARGETS="$(echo "${2}" | tr , " ")"; shift 2;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -406,15 +384,13 @@ esac
 test_prereq
 
 # preflights checks and destination detection
-find_environment $1
-verify_environment $1
+find_environment ${1}
+verify_environment ${1}
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "$TARGET/uictpl.conf"
-[ -f "$TARGET/custom.conf" ] &&	source "$TARGET/custom.conf"
-test_environment_configuration
+load_environment_configuration
 
+# list targets
 if [ ${LIST_TARGETS} -gt 0 ]; then
 	list_targets
 	exit $?
@@ -428,6 +404,9 @@ test_environment_empty
 
 # checks if nobody other is working in the environment
 test_mountinuse
+
+# load custom build libraries
+load_build_libraries
 
 # play the music
 show_verbose 2 "Preparing chroot special filesystems..."

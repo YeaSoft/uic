@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# (c) 2014 YeaSoft Int'l - Leo Moll
+#
+# Version 20140926
+# This script demonstrates the implementation of
+# custom build targets
+
+#####################################
+# script initialization
+
+function build_target_TEMPLATE {
+	# initialize variables
+	UIC_OUTPUTFILE="${UIC_BUILDNAME}."
+	# parse parameters
+	PARSER=$(getopt --name build_target_TEMPLATE --options o: --longoptions output: -- "$@")
+	test_getopt
+	eval set -- "${PARSER}"
+	while true; do
+		case "$1" in
+		-o|--output)	UIC_OUTPUTFILE="${2}"
+				shift 2
+				;;
+		--)		shift; break;;
+		esac
+	done
+
+	# do something
+}

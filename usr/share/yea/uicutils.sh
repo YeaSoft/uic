@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20140514
+# VERSION 20140928
 # function collection for the unified installation creator
 
 #####################
@@ -18,7 +18,7 @@ SCRIPTNAME=$(basename "${SCRIPTFULL}")
 SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.6'
+VERSION='0.17.0'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0
@@ -251,39 +251,47 @@ function cleanup_mounts {
 	done
 }
 
-
-function uic_require {
+function uic_testrequire {
 	if [ -z "$1" ]; then
-		show_verbose 2 "No specific version requested"
+		show_verbose 3 "No specific version requested"
 		return 0
 	fi
 	if [ "$1" = "${VERSION}" ]; then
-		show_verbose 2 "Requested version $1 exactly matched"
+		show_verbose 3 "Requested version $1 exactly matched"
 		return 0
 	fi
 	if [ "$1" \< "${VERSION}" ]; then
-		show_verbose 2 "Requested version $1 satisfied since running on ${VERSION}"
+		show_verbose 3 "Requested version $1 satisfied since running on ${VERSION}"
 		return 0
 	fi
-	show_error "Template incompatible since it requires at least version $1 of uic"
-	exit 5
+	show_verbose 3 "Requested version $1 too high"
+	return 1
+}
+
+function uic_require {
+	if ! uic_testrequire $@; then
+		show_error "Template incompatible since it requires at least version $1 of uic"
+		exit 5
+	fi
 }
 
 function find_environment {
+	# Parameters:
+	# $1: optional name or path to an environment
 	if [ $# -lt 1 ]; then
 		# no environment name specified. It must be here....
 		TARGET="$(pwd)"
 	elif [ "${1:0:1}" = "/" ]; then
 		# absolute path specified
 		TARGET="$(realpath -s $1)"
-	elif [ -d "$(pwd)/$1" ]; then
+	elif [ -d "$(pwd)/${1}" ]; then
 		# specified environment under the current directory?
-		TARGET="$(realpath -s $(pwd)/$1)"
-	elif [ -d "${UIC_WORKDIR}/$1" ]; then
+		TARGET="$(realpath -s $(pwd)/${1})"
+	elif [ -d "${UIC_WORKDIR}/${1}" ]; then
 		# specified environment under the default working directory?
-		TARGET="$(realpath -s ${UIC_WORKDIR}/$1)"
+		TARGET="$(realpath -s ${UIC_WORKDIR}/${1})"
 	else
-		show_error "Environment $1 does not exist"
+		show_error "Environment ${1} does not exist"
 		exit 2
 	fi
 	test_environment "${TARGET}"
@@ -291,19 +299,68 @@ function find_environment {
 	TARGETPATH="$(dirname ${TARGET})"
 }
 
+function load_environment_configuration {
+	# Parameters:
+	# $1: optional name of a variant (overrides the detected variant)
+	UIC_VARIANT=""
+	UIC_VARDESC=""
+	source "${TARGET}/uictpl.conf"
+	if [ "${1}" = "override-mandatory" ]; then
+		UIC_VARIANT="override-mandatory"
+	elif [ -n "${1}" ]; then
+		# variant passed as parameter
+		if [ -f "${TARGET}/uictpl.${1}.conf" ]; then
+			show_verbose 1 "Installation variant ${1} selected"
+			UIC_VARIANT="${1}"
+			source "${TARGET}/uictpl.${1}.conf"
+		else
+			show_error "Variant '${1}' does not exist"
+		fi
+	elif [ -f "${TARGET}/chroot/etc/uictpl.conf" ]; then
+		# check if populated installation environment was built from a variant
+		TMPFILE="${TARGET}/chroot/etc/uictpl.conf"
+		TMPVARIANT=$(expr match "$(grep '^[[:space:]]*UIC_VARIANT' ${TMPFILE})" '^[[:space:]]*UIC_VARIANT[[:space:]]*=[[:space:]]*"\(.*\)".*$')
+		if [ -n "${TMPVARIANT}" ]; then
+			# variant loaded from populated installation environment
+			if [ -f "${TARGET}/uictpl.${TMPVARIANT}.conf" ]; then
+				show_verbose 1 "Installation environment is based on variant ${TMPVARIANT}"
+				UIC_VARIANT="${TMPVARIANT}"
+				source "${TARGET}/uictpl.${TMPVARIANT}.conf"
+			else
+				show_error "Variant '${TMPVARIANT}' does not exist any more in the installation environment"
+			fi
+		fi
+	fi
+	# load optional custom configuration
+	[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
+	[ -n "${UIC_VARIANT}" -a -f "${TARGET}/custom.${UIC_VARIANT}.conf" ] && source "${TARGET}/custom.${UIC_VARIANT}.conf"
+	case "${UIC_VARIANT}" in
+	# check configuration for validity
+	nodefault|incomplete|mandatory)
+		show_error "This recipe requires the selection of a specific variant. Use uic_create -l to list available variants."
+		exit 3
+		;;
+	override-mandatory)
+		show_verbose 2 "Only base configuration without any validity checks will be loaded."
+		UIC_VARIANT=""
+		;;
+	*)	show_verbose 2 "Performing configuration validity checks"
+		test_environment_configuration
+		;;
+	esac
+	# define variables for working paths
+	UIC_WP_ROOTFS="${TARGET}/chroot"
+	UIC_WP_OUTPUT="${TARGET}/output${UIC_VARIANT:+/${UIC_VARIANT}}"
+	UIC_WP_CUSTOM="${TARGET}/files"
+	UIC_WP_BUILD="${TARGET}/build"
+}
+
 function test_environment {
-	if [ ! -d "$1" ]; then
+	if [ ! -d "${1}" ]; then
 		show_error "Environment $1 does not exist"
 		exit 1
-	fi
-
-	if [ ! -f "$1/uictpl.conf" ]; then
-		show_error "Environment $1 does not contain a configuration file"
-		exit 1
-	fi
-
-	if [ ! -d "$1/files" ]; then
-		show_error "Environment $1 is invalid"
+	elif [ ! -f "${1}/uictpl.conf" ]; then
+		show_error "Environment ${1} does not contain a configuration file"
 		exit 1
 	fi
 }
@@ -312,9 +369,9 @@ function test_environment_empty {
 	if [ ! -d "${TARGET}/chroot" ]; then
 		show_error "Installation environment is empty. Use 'uic create' to create a new one."
 		exit 1
-	fi
-	if [ $(find "${TARGET}/chroot" | wc -l) -lt 2 ]; then
-		show_error "Installation environment is empty. Use 'uic create' to create a new one."
+	elif [ ! -f "${TARGET}/chroot/etc/uictpl.conf" ]; then
+#	elif [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -lt 2 ]; then
+		show_error "Installation environment is not populated. Use 'uic create' to create a new one."
 		exit 1
 	fi
 }
@@ -324,24 +381,19 @@ function test_environment_configuration {
 	if [ -z "${UIC_SRCNAME}" ]; then
 		show_error "UIC_SRCNAME missing in environment configuration file"
 		exit 1
-	fi
-	if [ -z "${UIC_SRCVERSION}" ]; then
+	elif [ -z "${UIC_SRCVERSION}" ]; then
 		show_error "UIC_SRCVERSION missing in environment configuration file"
 		exit 1
-	fi
-	if [ -z "${UIC_ARCH}" ]; then
+	elif [ -z "${UIC_ARCH}" ]; then
 		show_error "UIC_ARCH missing in environment configuration file"
 		exit 1
-	fi
-	if [ -z "${UIC_RELEASE}" ]; then
+	elif [ -z "${UIC_RELEASE}" ]; then
 		show_error "UIC_RELEASE missing in environment configuration file"
 		exit 1
-	fi
-	if [ -z "${UIC_REPOSITORY}" ]; then
+	elif [ -z "${UIC_REPOSITORY}" ]; then
 		show_error "UIC_REPOSITORY missing in environment configuration file"
 		exit 1
-	fi
-	if [ -z "${UIC_KERNEL}" ]; then
+	elif [ -z "${UIC_KERNEL}" ]; then
 		show_error "UIC_KERNEL missing in environment configuration file"
 		exit 1
 	fi
@@ -460,21 +512,16 @@ function cleanup_environment {
 }
 
 function verify_environment {
-	if [ -z "$1" ]; then
-		TESTPATH=${TARGET}
-	else
-		TESTPATH=${1}
-	fi
+	TESTPATH=${1:-${TARGET}}
 	if [ ! -f "${TESTPATH}/uictpl.md5" ]; then
-		show_verbose 1 "No integrity checksums found."
+		show_verbose 2 "No integrity checksums found. Nothing to check."
 		return 0;
 	fi
 	show_verbose 2 "Testing integrity checksums"
 	MD5TEMP=$(mktemp)
-	SEDFORMULA="s/ \*/ \*"$(echo -n "$TESTPATH" | sed -e 's/\//\\\//g')"\//g" 
+	SEDFORMULA="s/ \*/ \*"$(echo -n "$TESTPATH" | sed -e 's/\//\\\//g')"\//g"
 	sed -e "$SEDFORMULA" < "${TESTPATH}/uictpl.md5" > "$MD5TEMP"
-	md5sum --quiet -c "$MD5TEMP"
-	if [ $? -ne 0 ]; then
+	if ! md5sum --quiet -c "$MD5TEMP"; then
 		show_warning "Environment integrity error."
 		rm "$MD5TEMP"
 		return 1
@@ -524,9 +571,11 @@ function apply_customizations {
 	show_verbose 1 "Applying customizations to the target installation environment..."
 	call_hook pre_customization
 	call_chroot_hook chroot_pre_customization
-	# install files delivered with the template
-	show_verbose 2 "Installing custom files from '${CUST_SUBDIR}'"
-	cp -a "${TARGET}/${CUST_SUBDIR}/." "${TARGET}/chroot/"
+	if [ -d "${TARGET}/${CUST_SUBDIR}" ]; then
+		# install files delivered with the template
+		show_verbose 2 "Installing custom files from '${CUST_SUBDIR}'"
+		cp -a "${TARGET}/${CUST_SUBDIR}/." "${TARGET}/chroot/"
+	fi
 	# remove files as requested by the template
 	if [ -f "${TARGET}/${CUST_SUBDIR}.remove" ]; then
 		show_verbose 2 "Processing file deletion list ${CUST_SUBDIR}.remove"
@@ -540,7 +589,7 @@ function apply_customizations {
 		mkdir -p "${TARGET}/chroot/aptkeys"
 		mount -o bind "${TARGET}/${KEYS_SUBDIR}" "${TARGET}/chroot/aptkeys"
 		for KEYFILE in $(find "${TARGET}/${KEYS_SUBDIR}" -name '*.key' -printf " %f"); do
-			chroot "${TARGET}/chroot" apt-key add /aptkeys/${KEYFILE}
+			chroot "${TARGET}/chroot" apt-key add /aptkeys/${KEYFILE} > /dev/null
 			RESULT=$?
 			if [ ${RESULT} -ne 0 ]; then
 				umount "${TARGET}/chroot/aptkeys"
@@ -852,15 +901,38 @@ function update_sources {
 
 function update_system {
 	show_verbose 1 "Updating system..."
-	chroot ${TARGET}/chroot apt-get ${QUIET} -y upgrade
+	chroot "${TARGET}/chroot" apt-get ${QUIET} -y upgrade
 	test_exec chroot "${TARGET}/chroot" apt-get ${QUIET} -y upgrade
 }
 
+function install_uic_tag {
+	TMPFILE="${TARGET}/chroot/etc/uictpl.conf"
+	( cat << EOFF
+########################################################
+# UIC creation tag
+#
+# DO NOT REMOVE THIS FILE. IT IS USED BY VARIOUS SCRIPTS
+# AND REMOVING IT MAY CAUSE MALFUNCTIONS
+UIC_SRCNAME="${UIC_SRCNAME}"
+UIC_SRCVERSION="${UIC_SRCVERSION}"
+UIC_SRCDESC="${UIC_SRCDESC}"
+UIC_VARDESC="${UIC_VARDESC}"
+UIC_VARIANT="${UIC_VARIANT}"
+UIC_ARCH="${UIC_ARCH}"
+UIC_RELEASE="${UIC_RELEASE}"
+UIC_REPOSITORY="${UIC_REPOSITORY}"
+UIC_CREATION_TIMESTAMP="$(date +'%Y-%m-%d %H:%M %z')"
+UIC_CREATION_VERSION="${VERSION}"
+EOFF
+	) > ${TMPFILE}
+	unset TMPFILE
+}
+
 function install_ppas {
-	if [ -n "$UIC_PPAS" ]; then
-		for elem in "$UIC_PPAS"; do
-			show_verbose 1 "Adding PPA $elem"
-			add_ppa $elem
+	if [ -n "${UIC_PPAS}" ]; then
+		for elem in "${UIC_PPAS}"; do
+			show_verbose 1 "Adding PPA ${elem}"
+			add_ppa ${elem}
 		done
 	fi
 }

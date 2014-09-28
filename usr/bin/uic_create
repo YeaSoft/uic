@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140514
+# Version 20140928
 # This script creates a unified installation environment
 
 #####################################
@@ -19,18 +19,23 @@ source /usr/share/yea/uicutils.sh || exit 1
 
 # initialize runtime variables
 FORCE=0
+LIST=0
 QUIET=-qq
+UIC_VARIANT=""
 
 #####################################
 # function section
 
 function usage {
 	cat <<EOF
-usage: ${SCRIPTNAME} [-hvF] [<environment name>]
+usage: ${SCRIPTNAME} [-hvlFC] [-V <variant>] [<environment name>]
 
 Options:
- -F, --force                  force deletion of existing installation
+ -C, --clean                  force initial deletion of existing installation
+ -F, --force                  force installation also in unclean environment
  -v, --verbose                increase verbosity
+ -l, --list                   show the list of available variants
+ -V, --variant <variant>      create using the specified variant
 (-h) --help                   show this help (-h works with no other options)
 
 This script creates a unified installation environment
@@ -45,20 +50,122 @@ environment directory. Otherwise it can be:
 EOF
 }
 
+function list_variants {
+	if [ $(find . -name 'uictpl.*.conf' | wc -l) -eq 0 ]; then
+		echo "There are no variants available for ${TARGETNAME}"
+		return 0
+	fi
+	echo "The following variants are available for ${TARGETNAME}:"
+	echo
+	echo "Variant              Description"
+	echo "----------------------------------------------------------------------"
+	for variant_name in $(find "${TARGET}" -name 'uictpl.*.conf' | sort); do
+		UIC_VARIANT=$(expr match "${variant_name}" '.*uictpl\.\(.*\)\.conf')
+		UIC_VARDESC=$(expr match "$(grep '^[[:space:]]*UIC_VARDESC' ${variant_name})" '^[[:space:]]*UIC_VARDESC[[:space:]]*=[[:space:]]*"\(.*\)".*$')
+		printf "%-20.20s %s\n" "${UIC_VARIANT}" "${UIC_VARDESC}"
+	done
+	return 0
+}
+
+function test_install_requirements {
+	if [ ! -d "${TARGET}/chroot" ]; then
+		mkdir -p "${TARGET}/chroot"
+		return 0
+	fi
+	# test if there is already a populated installation
+	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a ${FORCE} -lt 1 ]; then
+		show_error "Target installation environment ${TARGETNAME} is already existing. Use -F to force installation or -C to cleanup."
+		return 1
+	fi
+	# check if some of the special file system mounts are still existing
+	test_mountinuse
+	# clean up installation area if needed
+	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 ]; then
+		if [ ${FORCE} -gt 1 ]; then
+			show_verbose 1 "Cleaning up target installation environment ${TARGETNAME}..."
+			if [ -d "${TARGET}/chroot/lost+found" ]; then
+				show_error "Cannot clean mounted installation environment. Partition should be formatted manually."
+				return 1
+			else
+				rm -rf "${TARGET}/chroot"
+				mkdir -p "${TARGET}/chroot"
+			fi
+		else
+			show_warning "Installation will be forced in a populated installation environment."
+		fi
+	fi
+	return 0
+}
+
+function install_do_debootstrap {
+	call_hook pre_debootstrap
+	FILTERED_REPO=$(get_filtered_repository)
+	if [ -n "${UIC_PREINSTALL}" ]; then
+		debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
+	else
+		debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
+	fi
+	test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
+	call_hook post_debootstrap
+	unset FILTERED_REPO
+}
+
+function install_do_reconfigure {
+	if [ -z "${UIC_RECONFIGURE}" ]; then
+		return 0
+	fi
+	show_verbose 1 "Configuring packages..."
+	for RECONF_PACKAGE in ${UIC_RECONFIGURE}; do
+		RECONF_PKG=$(echo ${RECONF_PACKAGE} | cut -d: -f 1)
+		RECONF_MODE=$(echo ${RECONF_PACKAGE} | cut -d: -f 2)
+		if [ -z "${RECONF_MODE}" ]; then
+			chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure ${RECONF_PKG}
+			test_exec chroot chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure ${RECONF_PKG}
+		else
+			chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			test_exec chroot chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+		fi
+	done
+}
+
+function install_do_createusers {
+	case "${UIC_ROOTPASSWORD}" in
+	"")		show_warning "Password will not be initialized"
+			;;
+	"ask")		show_verbose 1 "Asking for root password..."
+			until chroot "${UIC_WP_ROOTFS}" passwd root; do
+				show_warning "You have to specify a valid password for root"
+			done
+			;;
+	"SHADOW:*")	show_verbose 1 "Setting encrypted root password..."
+			# make sure there is a root password in the file
+			printf "password\npassword\n" | chroot "${UIC_WP_ROOTFS}" passwd root  2> /dev/null
+			# replace it with the encrypted password
+			sed -i -e "s/root:[^:]*:/root:$(echo -n ${UIC_ROOTPASSWORD:7} | sed -e 's/\//\\\//g'):/" "${UIC_WP_ROOTFS}/etc/shadow"
+			;;
+	*)		show_verbose 1 "Setting root password..."
+			printf "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}\n" | chroot "${UIC_WP_ROOTFS}" passwd root  2> /dev/null
+			;;
+	esac
+}
+
 #####################################
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,F --longoptions help,verbose,force -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,l,F,C,V: --longoptions help,verbose,list,force,clean,variant: -- "$@")
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
-	-F|--force)                     FORCE=1; shift;;
+	-l|--list)			LIST=1; shift;;
+	-F|--force)                     (( FORCE++ )); shift;;
+	-C|--clean)			FORCE=2; shift;;
+	-V|--variant)			UIC_VARIANT="${2}"; shift 2;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -73,54 +180,29 @@ esac
 test_prereq
 
 # preflights checks and destination detection
-find_environment $1
-verify_environment $1
+find_environment ${1}
+verify_environment ${1}
 
-if [ -d "${TARGET}/chroot" ]; then
-	# test if there is already a populated installation
-	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a ${FORCE} -lt 1 ]; then
-		show_error "Target installation environment ${TARGETNAME} is already existing. Use -F to force cleanup."
-		exit 1
-	fi
+# list variants
+if [ ${LIST} -gt 0 ]; then
+	list_variants
+	exit 0
+fi
 
-	# check if some of the special file system mounts are still existing
-	test_mountinuse
-
-	# clean up installation area if needed
-	if [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -gt 1 -a ${FORCE} -gt 0 ]; then
-		show_verbose 1 "Cleaning up target installation environment ${TARGETNAME}..."
-		if [ -d "${TARGET}/chroot/lost+found" ]; then
-			show_error "Cannot clean mounted installation environment. Partition should be formatted manually."
-			exit 1
-		else
-			rm -rf "${TARGET}/chroot"
-			mkdir -p "${TARGET}/chroot"
-		fi
-	fi
-else
-	mkdir -p "${TARGET}/chroot"
+# test creation requirements
+if ! test_install_requirements; then
+	exit 3
 fi
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "${TARGET}/uictpl.conf"
-[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
-test_environment_configuration
+load_environment_configuration "${UIC_VARIANT}"
 
 # check builder compatibility
 test_builder_compatibility
 
-show_verbose  1 "Creating target installation environment ${TARGETNAME}..."
-call_hook pre_debootstrap
-FREPO=$(get_filtered_repository)
-if [ -n "${UIC_PREINSTALL}" ]; then
-	debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
-else
-	debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
-fi
-test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FREPO}
-call_hook post_debootstrap
-
+# finally we can start with the music
+show_verbose  1 "Creating target installation environment ${UIC_SRCNAME}${UIC_VARIANT:+ (${UIC_VARIANT})}..."
+install_do_debootstrap
 show_verbose 2 "Preparing chroot special filesystems..."
 init_script
 chroot_init
@@ -130,12 +212,8 @@ apply_customizations
 call_hook pre_installation
 call_chroot_hook chroot_pre_installation
 
-if [ -n "$UIC_PPAS" ]; then
-	for elem in "$UIC_PPAS"; do
-		show_verbose 1 "Adding PPA $elem"
-		add_ppa ${elem}
-	done
-fi
+install_ppas
+install_uic_tag
 
 init_apt_proxy
 	update_sources
@@ -143,20 +221,7 @@ exit_apt_proxy
 
 process_locales
 
-if [ -n "${UIC_RECONFIGURE}" ]; then
-	show_verbose 1 "Configuring packages..."
-	for RECONF_PACKAGE in ${UIC_RECONFIGURE}; do
-		RECONF_PKG=$(echo ${RECONF_PACKAGE} | cut -d: -f 1)
-		RECONF_MODE=$(echo ${RECONF_PACKAGE} | cut -d: -f 2)
-		if [ -z "${RECONF_MODE}" ]; then
-			chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
-			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
-		else
-			chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
-			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
-		fi
-	done
-fi
+install_do_reconfigure
 
 init_apt_proxy
 	# update system
@@ -172,24 +237,7 @@ exit_apt_proxy
 # just in case something was changed by apt-get
 apply_customizations
 
-case "${UIC_ROOTPASSWORD}" in
-"")		show_warning "Password will not be initialized"
-		;;
-"ask")		show_verbose 1 "Asking for root password..."
-		until chroot "${TARGET}/chroot" passwd root; do
-			show_warning "You have to specify a valid password for root"
-		done
-		;;
-"SHADOW:*")	show_verbose 1 "Setting encrypted root password..."
-		# make sure there is a root password in the file
-		printf "password\npassword\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
-		# replace it with the encrypted password
-		sed -i -e "s/root:[^:]*:/root:$(echo -n ${UIC_ROOTPASSWORD:7} | sed -e 's/\//\\\//g'):/" "${TARGET}/chroot/etc/shadow"
-		;;
-*)		show_verbose 1 "Setting root password..."
-		printf "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
-		;;
-esac
+install_do_createusers
 
 call_chroot_hook chroot_post_installation
 call_hook post_installation

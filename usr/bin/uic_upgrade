@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140927
 # This script upgrades a unified installation environment
 
 #####################################
@@ -55,13 +55,13 @@ PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,C,I --longoptions help,verb
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-C|--skip-customization)	SKIP_CUSTOMIZATION=1; shift;;
 	-I|--do-reinstallations)	DO_REINSTALLATIONS=1; shift;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -76,8 +76,8 @@ esac
 test_prereq
 
 # preflights checks and destination detection
-find_environment $1
-verify_environment $1
+find_environment ${1}
+verify_environment ${1}
 
 # checks if the installation environment has been populated
 test_environment_empty
@@ -86,10 +86,7 @@ test_environment_empty
 test_mountinuse
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "${TARGET}/uictpl.conf"
-[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
-test_environment_configuration
+load_environment_configuration
 
 # check builder compatibility
 test_builder_compatibility
@@ -116,8 +113,8 @@ update_sources
 update_system
 
 show_verbose 1 "Updating system..."
-chroot ${TARGET}/chroot apt-get ${QUIET} -y upgrade
-test_exec chroot "${TARGET}/chroot" apt-get ${QUIET} -y upgrade
+chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} -y upgrade
+test_exec chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} -y upgrade
 
 if [ ${DO_REINSTALLATIONS} -gt 0 ]; then
 	install_software

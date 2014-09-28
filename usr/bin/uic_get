@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140927
 # This script prepares the environment for a unified installation
 
 #####################################
@@ -58,46 +58,47 @@ the default work directory (usually /usr/src)
 EOF
 }
 
-# $1 : repository url
-# $2 : optional search operator
 function list_templates {
+	# $1 : repository url
+	# $2 : optional search operator
 	CONTENT=$(mktemp)
-	if download_archive $1 $CONTENT; then
-		if [ $(grep -c "href=\"${2-.*}\\.manifest\"" $CONTENT) -gt 0 ]; then
+	if download_archive ${1} ${CONTENT}; then
+		if [ $(grep -c "href=\"${2-.*}\\.manifest\"" ${CONTENT}) -gt 0 ]; then
 			show_verbose 1 "The following templates are stored on $1:"
-			grep -o "href=\"${2-.*}\\.manifest\"" $CONTENT | sed -e "s/href=\"//g" -e "s/.manifest\"//g" | sort
+			grep -o "href=\"${2-.*}\\.manifest\"" ${CONTENT} | sed -e "s/href=\"//g" -e "s/.manifest\"//g" | sort
 		else
 			show_verbose 1 "There are no templates stored on $1"
 		fi
 	fi
-	rm $CONTENT
+	rm ${CONTENT}
+	unset CONTENT
 }
 
 
-# $1 : path to the manifest file
-# $2 : repository url
-# $3 : template name
 function show_versions {
-	if [ -f "$1" ]; then
-		if [ $(stat -t "$1" | cut -d\  -f 2) -gt 0 ]; then
-			show_verbose 1 "The following versions of $3 are available on $2:"
-			awk '{print $2}' "$1" | sed -e "s/*//g"
+	# $1 : path to the manifest file
+	# $2 : repository url
+	# $3 : template name
+	if [ -f "${1}" ]; then
+		if [ $(stat -t "${1}" | cut -d\  -f 2) -gt 0 ]; then
+			show_verbose 1 "The following versions of ${3} are available on ${2}:"
+			awk '{print $2}' "${1}" | sed -e "s/*//g"
 			return 0
 		fi
 	fi
-	show_verbose 1 "There are no versions of $3 available on $2."
+	show_verbose 1 "There are no versions of ${3} available on ${2}."
 	return 0;
 }
 
-# $1 : template url
-# $2 : destination filename
 function download_archive {
-	show_verbose 1 "Downloading $(basename $1) from $(dirname $1)..."
+	# $1 : template url
+	# $2 : destination filename
+	show_verbose 1 "Downloading $(basename ${1}) from $(dirname ${1})..."
 	DA_TEMPDIR=$(mktemp -d)
 	DA_ERR=0
 	if  wget -q -P "${DA_TEMPDIR}" $1; then
-		if [ -f "${DA_TEMPDIR}/$(basename $1)" ]; then
-			mv "${DA_TEMPDIR}/$(basename $1)" "$2"
+		if [ -f "${DA_TEMPDIR}/$(basename ${1})" ]; then
+			mv "${DA_TEMPDIR}/$(basename ${1})" "${2}"
 		else
 			DA_ERR=2
 		fi
@@ -112,25 +113,25 @@ function download_archive {
 # script section
 
 # Parameter parsing
-PARSER=$(getopt --name "$SCRIPTNAME" --options h,v,F,n:,l,s --longoptions help,verbose,force,name:,list,show -- "$@")
+PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v,F,n:,l,s --longoptions help,verbose,force,name:,list,show -- "$@")
 test_getopt
-eval set -- "$PARSER"
+eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	-F|--force)                     FORCE=1; shift;;
 	-e|--enter)			ENTER=1; shift;;
-	-n|--name)			ENVNAME="$2"; shift 2;;
+	-n|--name)			ENVNAME="${2}"; shift 2;;
 	-s|--show)			SHOWVERSIONS=1; shift;;
 	-l|--list)			LISTEMPLATES=1; shift;;
 	--)				shift; break;;
-        *)				echo "$SCRIPTNAME: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
 # configuration checking
-case "$VERBOSE" in
+case "${VERBOSE}" in
 0)	;;
 1)	show_name;;
 *)	show_name;;
@@ -139,25 +140,25 @@ esac
 # check if we have all that we need
 test_prereq
 
-if [ $LISTEMPLATES -gt 0 ]; then
+if [ ${LISTEMPLATES} -gt 0 ]; then
 	for REPOSITORY in ${UIC_REPOSITORIES}; do
-		list_templates $REPOSITORY $1
+		list_templates ${REPOSITORY} ${1}
 	done
 	exit 0;
-elif [ -z "$1" ]; then
+elif [ -z "${1}" ]; then
 	show_error "<source archive> must be specified."
 	exit 3;
 else
-	SRCARCHIVE="$1"
+	SRCARCHIVE="${1}"
 fi
-if [ -z "$2" ]; then
+if [ -z "${2}" ]; then
 	DESTPATH="${UIC_WORKDIR}"
 elif [ "${2:0:1}" = "/" ]; then
 	# absolute path
-	DESTPATH="$2"
+	DESTPATH="${2}"
 else
 	# relative path
-	DESTPATH="$(pwd)/$2"
+	DESTPATH="$(pwd)/${2}"
 fi
 
 if [ ! -d "${DESTPATH}" ]; then

@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# Version 20140508
+# Version 20140927
 # This script cleans up a unified installation environment
 
 #####################################
@@ -51,11 +51,11 @@ PARSER=$(getopt --name "${SCRIPTNAME}" --options h,v --longoptions help,verbose 
 test_getopt
 eval set -- "${PARSER}"
 while true; do
-	case "$1" in
+	case "${1}" in
 	-h|--help)			show_name; echo; usage; exit 1;;
 	-v|--verbose)			(( VERBOSE++ )); shift;;
 	--)				shift; break;;
-        *)				echo "${SCRIPTNAME}: $1: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
+        *)				echo "${SCRIPTNAME}: ${1}: unknown option"; show_error "syntax or usage error (code 1)"; exit 1;;
         esac
 done
 
@@ -70,8 +70,8 @@ esac
 test_prereq
 
 # preflights checks and destination detection
-find_environment $1
-verify_environment $1
+find_environment ${1}
+verify_environment ${1}
 
 # checks if nobody other is working in the environment
 test_mountinuse

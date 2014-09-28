@@ -6,4 +6,4 @@
 # called by:	uic_build
 #
 # This hook will be called by uic_build after performing the last build
-# step of the build procedure in the installation environment in $TARGET
+# step of the build procedure in the installation environment in ${TARGET}
