@@ -18,7 +18,7 @@ SCRIPTNAME=$(basename "${SCRIPTFULL}")
 SCRIPTPATH=$(dirname "${SCRIPTFULL}")
 VERBOSE=0
 # uic specific
-VERSION='0.16.9'
+VERSION='0.17.0'
 SPECIALFSM="/sys /proc /dev /dev/pts /dev/shm"
 SPECIALFSU="/dev/shm /dev/pts /dev /proc /sys"
 SPECIALFSMOUNT=0

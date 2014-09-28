@@ -1,4 +1,4 @@
-uic (0.16.9-1) unstable; urgency=low
+uic (0.17.0-1) unstable; urgency=low
 
   * Feature: Custom build target handling now implemented as loadable
     function collections (Closes #11)
