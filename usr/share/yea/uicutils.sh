@@ -305,7 +305,9 @@ function load_environment_configuration {
 	UIC_VARIANT=""
 	UIC_VARDESC=""
 	source "${TARGET}/uictpl.conf"
-	if [ -n "${1}" ]; then
+	if [ "${1}" = "override-mandatory" ]; then
+		UIC_VARIANT="override-mandatory"
+	elif [ -n "${1}" ]; then
 		# variant passed as parameter
 		if [ -f "${TARGET}/uictpl.${1}.conf" ]; then
 			show_verbose 1 "Installation variant ${1} selected"
@@ -329,17 +331,23 @@ function load_environment_configuration {
 			fi
 		fi
 	fi
+	# load optional custom configuration
+	[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
+	[ -n "${UIC_VARIANT}" -a -f "${TARGET}/custom.${UIC_VARIANT}.conf" ] && source "${TARGET}/custom.${UIC_VARIANT}.conf"
 	case "${UIC_VARIANT}" in
+	# check configuration for validity
 	nodefault|incomplete|mandatory)
 		show_error "This recipe requires the selection of a specific variant. Use uic_create -l to list available variants."
 		exit 3
 		;;
-	*)	;;
+	override-mandatory)
+		show_verbose 2 "Only base configuration without any validity checks will be loaded."
+		UIC_VARIANT=""
+		;;
+	*)	show_verbose 2 "Performing configuration validity checks"
+		test_environment_configuration
+		;;
 	esac
-	# load optional custom configuration
-	[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
-	[ -n "${UIC_VARIANT}" -a -f "${TARGET}/custom.${UIC_VARIANT}.conf" ] && source "${TARGET}/custom.${UIC_VARIANT}.conf"
-	test_environment_configuration
 	# define variables for working paths
 	UIC_WP_ROOTFS="${TARGET}/chroot"
 	UIC_WP_OUTPUT="${TARGET}/output${UIC_VARIANT:+/${UIC_VARIANT}}"

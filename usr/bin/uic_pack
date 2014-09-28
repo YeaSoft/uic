@@ -83,15 +83,12 @@ if [ ! -d "${OUTPUTPATH}" ]; then
 fi
 
 # load target configuration
-show_verbose 2 "Loading environment configuration..."
-source "${TARGET}/uictpl.conf"
-[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
-test_environment_configuration
+load_environment_configuration "override-mandatory"
 
 show_verbose 1 "Updating integrity checksums..."
 [ -f "${TARGET}/uictpl.md5" ] && rm "${TARGET}/uictpl.md5"
 MD5TEMP=$(mktemp)
-find "${TARGET}" -path "${TARGET}/output/*" -prune -o -path "${TARGET}/chroot/*" -prune -o -path "${TARGET}/custom.conf" -prune -o -path "${TARGET}/uictpl.md5" -prune -o -type f -print0 | xargs -0 md5sum -b > ${MD5TEMP}
+find "${TARGET}" -path "${TARGET}/output/*" -prune -o -path "${TARGET}/chroot/*" -prune -o -path "${TARGET}/custom.conf"  -prune -o -path "${TARGET}/custom.*.conf" -prune -o -path "${TARGET}/uictpl.md5" -prune -o -type f -print0 | xargs -0 md5sum -b > ${MD5TEMP}
 SEDFORMULA="s/*"$(echo -n "${TARGET}" | sed -e 's/\//\\\//g')"\//*/g"
 sed -e "${SEDFORMULA}" < ${MD5TEMP} > "${TARGET}/uictpl.md5"
 rm "${MD5TEMP}"
@@ -99,9 +96,9 @@ rm "${MD5TEMP}"
 if [ ${ONLYUPDATE} -eq 0 ]; then
 	show_verbose 1 "Packing installation environment..."
 	if [ "${TARGETNAME}" = "${UIC_SRCNAME}" ]; then
-		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --exclude "${TARGETNAME}/custom.conf" "${TARGETNAME}"
+		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --exclude "${TARGETNAME}/custom.conf"  --exclude "${TARGETNAME}/custom.*.conf" "${TARGETNAME}"
 	else
-		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --exclude "${TARGETNAME}/custom.conf" --transform "s/${TARGETNAME}/${UIC_SRCNAME}/g" "${TARGETNAME}"
+		tar -cjpf "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" --directory "${TARGETPATH}" --exclude "${TARGETNAME}/output" --exclude "${TARGETNAME}/chroot" --exclude "${TARGETNAME}/custom.conf" --exclude "${TARGETNAME}/custom.*.conf" --transform "s/${TARGETNAME}/${UIC_SRCNAME}/g" "${TARGETNAME}"
 	fi
 	MD5SUM=$(md5sum -b "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" | cut -d" " -f 1)
 	echo "${MD5SUM} *${UIC_SRCNAME}_${UIC_SRCVERSION}.tar.bz2" > "${OUTPUTPATH}/${UIC_SRCNAME}_${UIC_SRCVERSION}.md5"
