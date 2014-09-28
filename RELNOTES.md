@@ -4,24 +4,54 @@ Unified Installation Creator - Release Notes
 Release Scope
 -------------
 
-By implementing the possibility to seamlessly add any package repository from
-a template, UIC has discarded the last dependency to Ubuntu's infrastructure
-allowing the development of templates for different distributions with minimal
-differences.
+The scope of this release is focussed in improving the usability when
+installing systems and the maintainability of very similar _recipes_.
 
-The addition of some new template settings and a dramatically improved
-autogenerator of essential files and settings notably simplifies many
-templates by making many customisations in the /file section superfluous.
+Although it's still a long way to `uic_makeimage` and `uic_installsystem`
+the improvements to `uic_build` should now allow the easy automation of
+various common finalization tasks in system installation.
 
-The compatibility between the build system and the target system is now
-checked against the effective capabilities of the system.
+The still needed functionalities will be developed first within the new
+installation recipes for common operating systems using _custom build target
+libraries_. In future some of these functionalities may become part of the
+standard __uic__ library.
 
-After two years of internal use, the project is now getting more mature and
-therefore the project will be maintained on GitHub starting from now.
+In order to make the maintainment of very simlar _recipes_ easier, __uic__
+now supports _recipes_ with multiple _variants_. If a recipe offers multiple
+_variants_, they can be listed with `uic create --list` and can be used
+with `uic create --variant VARIANT_NAME`. All other __uic__ commands will
+not need specifying the _variant_ since the information is saved into
+the installation environment.
 
 
-What's new in Version 0.16.6 (2014-05-16)
+What's new in Version 0.17.0 (2014-09-28)
 -----------------------------------------
+
+  * Feature: Custom build target handling now implemented as loadable
+    function collections (Closes #11)
+  * Feature: Added support for recipe variants (Closes #12)
+  * Feature: Added support for recipes with mandatory variant
+    selection (Closes #13)
+
+
+Known Problems
+--------------
+
+ * During the execution of `uic_create` and `uic_upgrade` it may still happen
+   that some process is started in the target root filesystem by the package
+   manager preventing the special filesystems to be unmounted. This has been
+   observed specifically with projects based on Ubuntu 10.04.
+   This can be circumvented with a workaround stopping all possibly affected
+   services in the hook script `chroot_post_installation`.
+ * It has been noticed that newer systems (like Ubuntu 14.04) start an `udevd`
+   in the target root filesystem making it hard to detach an installation
+   partition with `uic_detach`. The issue will be investigated further.
+
+
+Release History
+---------------
+
+### Version 0.16 released on 2014-05-16 ###
 
   * Feature: Support encrypted passwords in `UIC_ROOTPASSWORD` by
     specifying `UIC_ROOTPASSWORD=SHADOW:$6$HnFcw.Hb$G5.....`
@@ -53,20 +83,6 @@ What's new in Version 0.16.6 (2014-05-16)
     in the environment (Closes #9)
   * Fix: Special file systems in environment are now unmounted with
     any target path specification on the commandline (Closes #10)
-
-Known Problems
---------------
-
- * During the execution of `uic_create` and `uic_upgrade` it may still happen that
-   some process is started in the chroot by the package manager preventing the
-   special filesystems to be unmounted. This has been observed specifically
-   with projects based on Ubuntu 10.04.
-   This can be circumvented with a workaround stopping all possibly affected
-   services in the hook script `chroot_post_installation`.
-
-
-Release History
----------------
 
 ### Version 0.15 released on 2013-03-14 ###
 
