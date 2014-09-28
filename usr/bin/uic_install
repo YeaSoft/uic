@@ -136,8 +136,8 @@ if [ ${DO_REINSTALLATIONS} -gt 0 ]; then
 fi
 
 show_verbose 1 "Installing $@"
-chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} install $@
-test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} install $@
+chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} install $@
+test_exec chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} install $@
 
 exit_apt_proxy
 

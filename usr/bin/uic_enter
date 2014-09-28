@@ -93,7 +93,7 @@ if [ $(mount | grep ${TARGET}/chroot/dev | wc -l) -eq 0 ]; then
 	chroot_init
 	show_verbose 1 "Entering environment..."
 	export debian_chroot="${TARGET} Environment"
-	chroot "${TARGET}/chroot" /bin/bash
+	chroot "${UIC_WP_ROOTFS}" /bin/bash
 	show_verbose 1 "Exiting environment..."
 	unset debian_chroot
 	show_verbose 1 "Unmounting special file systems in environment..."
@@ -101,7 +101,7 @@ if [ $(mount | grep ${TARGET}/chroot/dev | wc -l) -eq 0 ]; then
 else
 	show_verbose 1 "Entering environment..."
 	export debian_chroot="${TARGET} Environment"
-	chroot "${TARGET}/chroot" /bin/bash
+	chroot "${UIC_WP_ROOTFS}" /bin/bash
 	show_verbose 1 "Exiting environment..."
 	unset debian_chroot
 fi

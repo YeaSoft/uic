@@ -138,10 +138,10 @@ else
 	show_verbose 1 "Purging $@"
 fi
 
-chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
-test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
-chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
-test_exec chroot ${TARGET}/chroot apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
+chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
+test_exec chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} ${PURGE} remove $@
+chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
+test_exec chroot "${UIC_WP_ROOTFS}" apt-get ${QUIET} ${APTPARAMS} ${PURGE} autoremove
 
 if [ ${DO_REINSTALLATIONS} -gt 0 ]; then
 	install_software

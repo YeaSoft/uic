@@ -96,11 +96,11 @@ function install_do_debootstrap {
 	call_hook pre_debootstrap
 	FILTERED_REPO=$(get_filtered_repository)
 	if [ -n "${UIC_PREINSTALL}" ]; then
-		debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FILTERED_REPO}
+		debootstrap --include=$(echo ${UIC_PREINSTALL} | tr " " ,) --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
 	else
-		debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FILTERED_REPO}
+		debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
 	fi
-	test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${TARGET}/chroot" ${FILTERED_REPO}
+	test_exec debootstrap debootstrap --arch ${UIC_ARCH} ${UIC_RELEASE} "${UIC_WP_ROOTFS}" ${FILTERED_REPO}
 	call_hook post_debootstrap
 	unset FILTERED_REPO
 }
@@ -114,11 +114,11 @@ function install_do_reconfigure {
 		RECONF_PKG=$(echo ${RECONF_PACKAGE} | cut -d: -f 1)
 		RECONF_MODE=$(echo ${RECONF_PACKAGE} | cut -d: -f 2)
 		if [ -z "${RECONF_MODE}" ]; then
-			chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
-			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure ${RECONF_PKG}
+			chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure ${RECONF_PKG}
+			test_exec chroot chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure ${RECONF_PKG}
 		else
-			chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
-			test_exec chroot chroot "${TARGET}/chroot" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
+			test_exec chroot chroot "${UIC_WP_ROOTFS}" dpkg-reconfigure -f${RECONF_MODE} ${RECONF_PKG}
 		fi
 	done
 }
@@ -128,18 +128,18 @@ function install_do_createusers {
 	"")		show_warning "Password will not be initialized"
 			;;
 	"ask")		show_verbose 1 "Asking for root password..."
-			until chroot "${TARGET}/chroot" passwd root; do
+			until chroot "${UIC_WP_ROOTFS}" passwd root; do
 				show_warning "You have to specify a valid password for root"
 			done
 			;;
 	"SHADOW:*")	show_verbose 1 "Setting encrypted root password..."
 			# make sure there is a root password in the file
-			printf "password\npassword\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
+			printf "password\npassword\n" | chroot "${UIC_WP_ROOTFS}" passwd root  2> /dev/null
 			# replace it with the encrypted password
-			sed -i -e "s/root:[^:]*:/root:$(echo -n ${UIC_ROOTPASSWORD:7} | sed -e 's/\//\\\//g'):/" "${TARGET}/chroot/etc/shadow"
+			sed -i -e "s/root:[^:]*:/root:$(echo -n ${UIC_ROOTPASSWORD:7} | sed -e 's/\//\\\//g'):/" "${UIC_WP_ROOTFS}/etc/shadow"
 			;;
 	*)		show_verbose 1 "Setting root password..."
-			printf "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}\n" | chroot "${TARGET}/chroot" passwd root  2> /dev/null
+			printf "${UIC_ROOTPASSWORD}\n${UIC_ROOTPASSWORD}\n" | chroot "${UIC_WP_ROOTFS}" passwd root  2> /dev/null
 			;;
 	esac
 }
