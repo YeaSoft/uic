@@ -2,7 +2,7 @@
 #
 # (c) 2012-2014 YeaSoft Int'l - Leo Moll
 #
-# VERSION 20140514
+# VERSION 20140928
 # function collection for the unified installation creator
 
 #####################
@@ -308,6 +308,7 @@ function load_environment_configuration {
 	if [ -n "${1}" ]; then
 		# variant passed as parameter
 		if [ -f "${TARGET}/uictpl.${1}.conf" ]; then
+			show_verbose 1 "Installation variant ${1} selected"
 			UIC_VARIANT="${1}"
 			source "${TARGET}/uictpl.${1}.conf"
 		else
@@ -320,6 +321,7 @@ function load_environment_configuration {
 		if [ -n "${TMPVARIANT}" ]; then
 			# variant loaded from populated installation environment
 			if [ -f "${TARGET}/uictpl.${TMPVARIANT}.conf" ]; then
+				show_verbose 1 "Installation environment is based on variant ${TMPVARIANT}"
 				UIC_VARIANT="${TMPVARIANT}"
 				source "${TARGET}/uictpl.${TMPVARIANT}.conf"
 			else
@@ -327,9 +329,22 @@ function load_environment_configuration {
 			fi
 		fi
 	fi
+	case "${UIC_VARIANT}" in
+	nodefault|incomplete|mandatory)
+		show_error "This recipe requires the selection of a specific variant. Use uic_create -l to list available variants."
+		exit 3
+		;;
+	*)	;;
+	esac
 	# load optional custom configuration
 	[ -f "${TARGET}/custom.conf" ] && source "${TARGET}/custom.conf"
+	[ -n "${UIC_VARIANT}" -a -f "${TARGET}/custom.${UIC_VARIANT}.conf" ] && source "${TARGET}/custom.${UIC_VARIANT}.conf"
 	test_environment_configuration
+	# define variables for working paths
+	UIC_WP_ROOTFS="${TARGET}/chroot"
+	UIC_WP_OUTPUT="${TARGET}/output${UIC_VARIANT:+/${UIC_VARIANT}}"
+	UIC_WP_CUSTOM="${TARGET}/files"
+	UIC_WP_BUILD="${TARGET}/build"
 }
 
 function test_environment {
