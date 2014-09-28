@@ -6,4 +6,4 @@
 # called by:	uic_create
 #
 # This hook will be called by uic_create after performing
-# a debootstrap of a base system in $TARGET
+# a debootstrap of a base system in ${TARGET}

@@ -6,6 +6,6 @@
 # called by:	uic_build
 #
 # This hook will be called by uic_build before performing a BUILDSTEP
-# build procedure in the installation environment in $TARGET
+# build procedure in the installation environment in ${TARGET}
 # This file is only a template. The file MUST be named based on the
 # build procedure (e.g. pre_build_initrd for initrd build procedure)

@@ -6,7 +6,7 @@
 # called by:		uic_create, uic_build, uic_upgrade
 #
 # This hook will be called by several command in the chrooted installation
-# environment in $TARGET after making all customizations (file copies and
-# deletions) to the installation environment in $TARGET
+# environment in ${TARGET} after making all customizations (file copies and
+# deletions) to the installation environment in ${TARGET}
 # Since this hook runs in chroot, none of the internal UIC variables are
 # available.

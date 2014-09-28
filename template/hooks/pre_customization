@@ -6,4 +6,4 @@
 # called by:	uic_create, uic_build, uic_upgrade
 #
 # This hook will be called by several commands before making any customizations
-# (file copies and deletions) to the installation environment in $TARGET
+# (file copies and deletions) to the installation environment in ${TARGET}

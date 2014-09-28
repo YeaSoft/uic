@@ -7,11 +7,11 @@
 #
 # This hook will be called by uic_create before making any software
 # installation and configuration steps in the installation environment
-# in $TARGET
+# in ${TARGET}
 
 
 # we must provide a valid /etc/resolv.conf in order to have apt-get
 # to work correctly. The provided /etc/resolv.conf will only be ok
 # in the final installation...
-echo nameserver 208.67.222.222  > "$TARGET/chroot/etc/resolv.conf"
-echo nameserver 208.67.220.220 >> "$TARGET/chroot/etc/resolv.conf"
+echo nameserver 208.67.222.222  > "${UIC_WP_ROOTFS}/etc/resolv.conf"
+echo nameserver 208.67.220.220 >> "${UIC_WP_ROOTFS}/etc/resolv.conf"
