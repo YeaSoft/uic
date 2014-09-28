@@ -4,7 +4,7 @@ uic_create - creates an installation in the specified installation environment
 
 .SH SYNOPSIS
 .SP
-.B uic_create [\-hvF] [
+.B uic_create [\-hvFC] [
 .I -V <variant>
 .B ] [
 .I <environment_path>
@@ -47,8 +47,15 @@ increases the verbosity level of the command. If specified more than once, the
 verbosity level will be increased. 
 
 .TP
-.B \-F, \-\-force
+.B \-C, \-\-clean
 force deletion of existing installation. Since \fBuic_create\fR will not
+overwrite by default existing installations found in the destination directory,
+this option permits to execute the command also if there is already an
+installation in place.
+
+.TP
+.B \-F, \-\-force
+ignores any already existing files in the installation. Since \fBuic_create\fR will not
 overwrite by default existing installations found in the destination directory,
 this option permits to execute the command also if there is already an
 installation in place.

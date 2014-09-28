@@ -369,8 +369,9 @@ function test_environment_empty {
 	if [ ! -d "${TARGET}/chroot" ]; then
 		show_error "Installation environment is empty. Use 'uic create' to create a new one."
 		exit 1
-	elif [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -lt 2 ]; then
-		show_error "Installation environment is empty. Use 'uic create' to create a new one."
+	elif [ ! -f "${TARGET}/chroot/etc/uictpl.conf" ]; then
+#	elif [ $(find "${TARGET}/chroot" | grep -v "lost+found" | wc -l) -lt 2 ]; then
+		show_error "Installation environment is not populated. Use 'uic create' to create a new one."
 		exit 1
 	fi
 }

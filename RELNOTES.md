@@ -32,7 +32,8 @@ What's new in Version 0.17.0 (2014-09-28)
   * Feature: Added support for recipe variants (Closes #12)
   * Feature: Added support for recipes with mandatory variant
     selection (Closes #13)
-
+  * Feature: Improved handling of "dirty" target root file systems
+    in uic_create (Closes #14)
 
 Known Problems
 --------------
